@@ -737,10 +737,14 @@ void dds_sensor_proxy::start( rs2_frame_callback_sptr callback )
         dds_stream->start_streaming();
     }
 
-    _formats_converter.set_frames_callback( callback );
-    const auto && process_cb = make_frame_callback( [&, this]( frame_holder f ) {
-        _formats_converter.convert_frame( f );
-    } );
+    rs2_frame_callback_sptr process_cb = callback;
+    if( get_format_conversion() != format_conversion::raw )
+    {
+        _formats_converter.set_frames_callback( callback );
+        process_cb = make_frame_callback( [&, this]( frame_holder f ) {
+            _formats_converter.convert_frame( f );
+        } );
+    }
 
     software_sensor::start( process_cb );
 }
@@ -797,7 +801,11 @@ void dds_sensor_proxy::stop()
 
 void dds_sensor_proxy::close()
 {
-    const auto & source_profiles = _formats_converter.get_active_source_profiles();
+    auto source_profiles = _active_converted_profiles;
+    if( get_format_conversion() != format_conversion::raw )
+    {
+        source_profiles = _formats_converter.get_active_source_profiles();
+    }
     realdds::dds_stream_profiles realdds_profiles = find_dds_profiles( source_profiles );
 
     try
@@ -1022,13 +1030,20 @@ void dds_sensor_proxy::set_frames_callback( rs2_frame_callback_sptr callback )
 {
     // This callback is mutable, might be modified.
     // For instance, record_sensor modifies this callback in order to hook it to record frames.
-    _formats_converter.set_frames_callback( callback );
+
+    if( get_format_conversion() != format_conversion::raw )
+        _formats_converter.set_frames_callback( callback );
+    else
+        software_sensor::set_frames_callback( callback );
 }
 
 
 rs2_frame_callback_sptr dds_sensor_proxy::get_frames_callback() const
 {
-    return _formats_converter.get_frames_callback();
+    if( get_format_conversion() != format_conversion::raw )
+        return _formats_converter.get_frames_callback();
+    else
+        return software_sensor::get_frames_callback();
 }
 
 
