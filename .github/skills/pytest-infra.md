@@ -125,6 +125,48 @@ When migrating a legacy `test-*.py` to `pytest-*.py`:
       A bare `except: pass` or a `finally:` that does cleanup but doesn't re-raise the original exception turns a real failure into a silent pass.
     - **Expected exceptions** (legacy `try/except RuntimeError: test.check_exception(...)`) → migrate to `with pytest.raises(RuntimeError, match="..."):` (see `unit-tests/syncer/pytest-ts-same-fps.py:63` for the pattern).
 
+## Handling `on_fail=test.ABORT`
+
+The legacy framework supported `with test.closure('Name', on_fail=test.ABORT):` — if that closure failed, all subsequent closures were skipped. In pytest, use the **`pytest-dependency`** plugin (already in `requirements.txt` and `plugins.py`).
+
+**Pattern**: mark the prerequisite test with `@pytest.mark.dependency(scope='module')`, and each dependent test with `@pytest.mark.dependency(scope='module', depends=["prerequisite_name"])`. If the prerequisite fails or is skipped, all dependents are automatically skipped.
+
+```python
+# Prerequisite test — asserts (hard fail if condition not met), registers as a dependency
+@pytest.mark.dependency(scope='module')
+def test_advanced_mode_support(device_in_service_mode):
+    """Prerequisite: camera must be in advanced mode."""
+    dev, ctx = device_in_service_mode
+    assert rs.rs400_advanced_mode(dev).is_enabled()
+
+# Dependent test — skipped automatically if test_advanced_mode_support failed/was skipped
+@pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support"])
+def test_set_depth_control(device_in_service_mode):
+    dev, ctx = device_in_service_mode
+    ...
+```
+
+**`scope='module'`**: limits dependency resolution to the current test file, so identically-named tests in other files do not interfere.
+
+**Parametrized tests**: when both the prerequisite and dependent tests share the same parametrization (e.g., `device_each`), `pytest-dependency` automatically matches per-parameter — `test_set_depth_control[D455-SN]` is only skipped if `test_advanced_mode_support[D455-SN]` specifically failed, not if a different device's run failed.
+
+**Chain of ABORTs**: if a file has multiple `on_fail=test.ABORT` closures in sequence, list all prerequisite names in `depends=`:
+
+```python
+@pytest.mark.dependency(scope='module')
+def test_advanced_mode_support(...):   # first ABORT
+    assert ...
+
+@pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support"])
+def test_visual_preset_support(...):   # second ABORT
+    assert ...
+
+# Everything after the second ABORT depends on both
+@pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
+def test_set_depth_control(...):
+    ...
+```
+
 ## Assertions: `assert` vs `pytest-check`
 
 The `pytest-check` plugin is available for soft assertions (non-stopping checks). Use it when the legacy test uses `test.check()` in a loop where execution should continue on failure — this matches the legacy behavior where `test.check()` recorded failures but didn't abort.
