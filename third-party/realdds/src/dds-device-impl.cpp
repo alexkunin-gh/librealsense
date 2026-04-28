@@ -94,7 +94,11 @@ void dds_device::impl::set_state( state_t new_state )
         // Remove stream if object not created (only stream options received, not stream header)
         for( auto stream = _streams.begin(); stream != _streams.end(); stream++ )
             if( ! stream->second )
-                stream = _streams.erase( stream );  
+            {
+                stream = _streams.erase( stream );
+                if( stream == _streams.end() ) // Erased the last element, break the loop before calling stream++.
+                    break;
+            }
 
         LOG_DEBUG( "[" << debug_name() << "] device is ready" );
     }
