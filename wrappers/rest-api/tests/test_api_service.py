@@ -26,7 +26,7 @@ class TestRealSenseAPI:
         webrtc_manager = patch_dependencies["webrtc_manager"]
 
         # Configure mock RealSenseManager
-        def mock_start_stream(device_id, configs, align_to=None):
+        def mock_start_stream(device_id, configs, align_to=None, reuse_cache=True):
             # Set up mock frame queues
             rs_manager.active_streams[device_id] = set(
                 [config.stream_type for config in configs]
