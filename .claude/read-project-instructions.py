@@ -9,7 +9,12 @@ import os
 
 def read(path):
     try:
-        with open(path, encoding="utf-8") as f:
+        # Verify path before opening file
+        base_real = os.path.realpath(".github")
+        target_real = os.path.realpath(path)
+        if os.path.commonpath([base_real, target_real]) != base_real:
+            raise Exception("Invalid file path")
+        with open(target_real, encoding="utf-8") as f:
             return f.read()
     except OSError:
         return None
