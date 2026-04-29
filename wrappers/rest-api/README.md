@@ -83,3 +83,11 @@ It simplifies remote control and data streaming from RealSense devices by handli
     ```bash
     pip3 install -r wrappers/rest-api/requirements.txt -r unit-tests/wrappers/rest-api/requirements.txt
     ```
+
+## Missing features that may be added in the future
+
+1. 3D view
+2. Metadata
+3. Post Processing Filters
+4. Record and Playback
+5. Agent / Ask for assistant
