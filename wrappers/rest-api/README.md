@@ -50,12 +50,13 @@ It simplifies remote control and data streaming from RealSense devices by handli
 
 ## Installation
 
+### API Server Setup
 
 1. **Create a virtual environment:**
 
    ```bash
    python3 -m venv venv
-   source venv/bin/activate
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 2. **Install dependencies:**
@@ -66,28 +67,94 @@ It simplifies remote control and data streaming from RealSense devices by handli
 
 3. **Run API server:**
 
+   You can start the server using either method:
+   
    ```bash
-   run start_server.sh
+   python main.py
+   ```
+   
+   Or use the shell script (Linux/macOS):
+   
+   ```bash
+   ./start_server.sh
    ```
 
-4. **Run tests(inside tests folder):**
+   The API server will start on `http://localhost:8000`
+
+4. **Verify the API:**
+
+   Open your browser and navigate to `http://localhost:8000/docs` to explore the API documentation via Swagger UI.
+
+### React Viewer Setup (Optional)
+
+For a modern web-based UI to interact with RealSense devices:
+
+1. **Prerequisites:**
+   - Node.js 18+ and npm installed
+
+2. **Navigate to the React viewer directory:**
 
    ```bash
-   pytest test_api_service.py
+   cd tools/react-viewer
    ```
 
+3. **Install dependencies:**
 
-## Testing
+   ```bash
+   npm install
+   ```
 
-1. **Install the test extras (from the repository root):**
-    ```bash
-    pip3 install -r wrappers/rest-api/requirements.txt -r unit-tests/wrappers/rest-api/requirements.txt
-    ```
+4. **Configure environment (if needed):**
+
+   Copy `.env.example` to `.env` and adjust settings if your API server runs on a different port.
+
+## Usage
+
+### Running with React Viewer
+
+1. **Start the REST API server** (in one terminal):
+
+   ```bash
+   # From wrappers/rest-api directory
+   python main.py
+   ```
+
+2. **Start the React viewer** (in another terminal):
+
+   ```bash
+   # From wrappers/rest-api/tools/react-viewer directory
+   npm run dev
+   ```
+
+3. **Open in browser:**
+
+   Navigate to `http://localhost:3000`
+
+For more details about the React viewer features and development, see `tools/react-viewer/README.md`.
+
+### Running Tests
+
+**API tests (inside tests folder):**
+
+```bash
+pytest test_api_service.py
+```
+
+
+## Advanced Testing
+
+**For comprehensive testing with test extras (from the repository root):**
+
+```bash
+pip3 install -r wrappers/rest-api/requirements.txt -r unit-tests/wrappers/rest-api/requirements.txt
+```
 
 ## Missing features that may be added in the future
 
-1. 3D view
-2. Metadata
-3. Post Processing Filters
-4. Record and Playback
-5. Agent / Ask for assistant
+1. Post Processing Filters (Advanced)
+2. Record and Playback
+3. Agent / Ask for assistant
+4. Advanced texture mapping
+5. Metadata
+
+**Note:** Basic 3D point cloud visualization and IMU data viewing are available in the React viewer.
