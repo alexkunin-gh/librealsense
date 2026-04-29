@@ -65,17 +65,15 @@ def _record_synthetic_bag(filename):
     sensor.open([depth_profile])
     sensor.start(rs.syncer())
 
-    # Pre-allocate every pixel buffer and hold the list alive until after
-    # recorder.pause() — software_video_frame.pixels stores a reference,
-    # not a copy, and the recorder's async pipeline may still be reading
-    # from it when on_video_frame returns.
+    # Pre-allocate pixel buffers (kept alive past on_video_frame) and use a
+    # fresh software_video_frame per call — reuse trips heap corruption.
     arrays = [_make_pixel_array(i) for i in range(NUM_FRAMES)]
-    frame = rs.software_video_frame()
-    frame.bpp = BPP
-    frame.stride = W * BPP
-    frame.domain = rs.timestamp_domain.hardware_clock
-    frame.profile = depth_profile
     for i, pixels in enumerate(arrays):
+        frame = rs.software_video_frame()
+        frame.bpp = BPP
+        frame.stride = W * BPP
+        frame.domain = rs.timestamp_domain.hardware_clock
+        frame.profile = depth_profile
         frame.pixels = pixels
         frame.timestamp = 10000 + i * 16667  # ~60 fps spacing in µs
         frame.frame_number = i
