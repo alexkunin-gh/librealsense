@@ -12,21 +12,21 @@ pytestmark = [
     pytest.mark.device_exclude("D401"),
     pytest.mark.device_each("D500*"),
     pytest.mark.context("nightly"),
-    pytest.mark.retries(2),  # See FW stability issue RSDSO-18908
+    pytest.mark.flaky(retries=2),  # See FW stability issue RSDSO-18908
 ]
 
 
 @pytest.mark.dependency(scope='module')
-def test_visual_preset_support(device_in_service_mode):
+def test_visual_preset_support(test_device_wrapped):
     """Prerequisite: no use continuing if there is no preset support."""
-    dev, ctx = device_in_service_mode
+    dev, ctx = test_device_wrapped
     depth_sensor = dev.first_depth_sensor()
     assert depth_sensor.supports(rs.option.visual_preset)
 
 
 @pytest.mark.dependency(scope='module', depends=["test_visual_preset_support"])
-def test_set_presets(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_presets(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     depth_sensor = dev.first_depth_sensor()
     depth_sensor.set_option(rs.option.visual_preset, int(rs.rs400_visual_preset.high_accuracy))
     assert depth_sensor.get_option(rs.option.visual_preset) == rs.rs400_visual_preset.high_accuracy
@@ -35,8 +35,8 @@ def test_set_presets(device_in_service_mode):
 
 
 @pytest.mark.dependency(scope='module', depends=["test_visual_preset_support"])
-def test_save_load_preset(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_save_load_preset(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     depth_sensor = dev.first_depth_sensor()
     am_dev = rs.rs400_advanced_mode(dev)
     saved_values = am_dev.serialize_json()
@@ -51,13 +51,13 @@ def test_save_load_preset(device_in_service_mode):
 
 
 @pytest.mark.dependency(scope='module', depends=["test_visual_preset_support"])
-def test_setting_color_options(device_in_service_mode):
+def test_setting_color_options(test_device_wrapped):
     """Setting visual preset should update color sensor options on D400 but not D500.
 
     Uses Hue (not Gain/Exposure) to avoid auto-exposure interference.
     Skipped on cameras without a color sensor or without Hue support (e.g. D457).
     """
-    dev, ctx = device_in_service_mode
+    dev, ctx = test_device_wrapped
     product_line = dev.get_info(rs.camera_info.product_line)
     product_name = dev.get_info(rs.camera_info.name)
     depth_sensor = dev.first_depth_sensor()

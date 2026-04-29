@@ -20,8 +20,14 @@ pytestmark = [
 
 
 def change_presets(dev, index, delay, errors):
-    depth_sensor = dev.first_depth_sensor()
-    assert depth_sensor.supports(rs.option.visual_preset)
+    try:
+        depth_sensor = dev.first_depth_sensor()
+        if not depth_sensor.supports(rs.option.visual_preset):
+            errors.append(f"Thread {index}: visual_preset not supported")
+            return
+    except Exception as e:
+        errors.append(f"Thread {index} setup: {e}")
+        return
     time.sleep(delay)
     for i in range(10):
         try:

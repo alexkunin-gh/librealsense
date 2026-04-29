@@ -26,8 +26,8 @@ def check_min_max_throw(sensor):
             sensor.set_option(option, option_range.max + 1)
 
 
-def test_options_out_of_range_throwing_exception(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_options_out_of_range_throwing_exception(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     sensors = dev.query_sensors()
     for sensor in sensors:
         check_min_max_throw(sensor)

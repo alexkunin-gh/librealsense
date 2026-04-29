@@ -74,6 +74,7 @@ When migrating a legacy `test-*.py` to `pytest-*.py`:
 3. **Handle `#test:` directives**: For each one found in the legacy test:
    - `#test:device` / `#test:device each(...)` → `@pytest.mark.device(...)` / `@pytest.mark.device_each(...)`
    - `#test:donotrun:!nightly` → `@pytest.mark.context("nightly")`
+   - `#test:retries N` → `@pytest.mark.flaky(retries=N)` (**not** `pytest.mark.retries(N)` — that marker does not exist in pytest-retry and silently becomes a no-op with a PytestUnknownMarkWarning)
    - `#test:timeout` → check if pytest has a native equivalent
    - `#test:platform` → `@pytest.mark.skipif(platform...)`
    - `#test:flag` → check for `pytest.mark` equivalent
@@ -134,15 +135,15 @@ The legacy framework supported `with test.closure('Name', on_fail=test.ABORT):` 
 ```python
 # Prerequisite test — asserts (hard fail if condition not met), registers as a dependency
 @pytest.mark.dependency(scope='module')
-def test_advanced_mode_support(device_in_service_mode):
+def test_advanced_mode_support(test_device_wrapped):
     """Prerequisite: camera must be in advanced mode."""
-    dev, ctx = device_in_service_mode
+    dev, ctx = test_device_wrapped
     assert rs.rs400_advanced_mode(dev).is_enabled()
 
 # Dependent test — skipped automatically if test_advanced_mode_support failed/was skipped
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support"])
-def test_set_depth_control(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_depth_control(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     ...
 ```
 
@@ -207,6 +208,7 @@ test_devices                 → returns ([rs.device, ...], rs.context)
 | You need | Use this fixture | Example |
 |---|---|---|
 | A device + context | `test_device` | Most hardware tests: streaming, options, metadata |
+| A device + context, D585S in service mode | `test_device_wrapped` | D585S option/preset tests — service mode entered once per module, restored at module teardown |
 | Multiple devices + context | `test_devices` | Multi-device tests (use with `device("D400*", "D400*")`) |
 | Just a context (custom queries) | `test_context` | Device enumeration, custom context settings |
 | Only hub setup, you create your own context | `module_device_setup` | Tests that need custom context settings (e.g., DDS config) |

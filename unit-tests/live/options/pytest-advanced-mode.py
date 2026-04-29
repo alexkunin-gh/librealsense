@@ -18,33 +18,33 @@ def get_am_dev(dev):
 
 
 @pytest.mark.dependency(scope='module')
-def test_advanced_mode_support(device_in_service_mode):
+def test_advanced_mode_support(test_device_wrapped):
     """Prerequisite: camera must be in advanced mode. All CI cameras should already be enabled."""
-    dev, ctx = device_in_service_mode
+    dev, ctx = test_device_wrapped
     am_dev = get_am_dev(dev)
     assert am_dev is not None
     assert am_dev.is_enabled()
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support"])
-def test_visual_preset_support(device_in_service_mode):
+def test_visual_preset_support(test_device_wrapped):
     """Cameras with advanced mode enabled should support visual preset."""
-    dev, ctx = device_in_service_mode
+    dev, ctx = test_device_wrapped
     depth_sensor = dev.first_depth_sensor()
     assert depth_sensor.supports(rs.option.visual_preset)
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
-def test_set_default_visual_preset(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_default_visual_preset(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     depth_sensor = dev.first_depth_sensor()
     depth_sensor.set_option(rs.option.visual_preset, int(rs.rs400_visual_preset.default))
     assert depth_sensor.get_option(rs.option.visual_preset) == rs.rs400_visual_preset.default
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
-def test_set_depth_control(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_depth_control(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     am_dev = get_am_dev(dev)
     dc = am_dev.get_depth_control()
     dc.plusIncrement = 11
@@ -72,8 +72,8 @@ def test_set_depth_control(device_in_service_mode):
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
-def test_set_rsm(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_rsm(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     am_dev = get_am_dev(dev)
     rsm = am_dev.get_rsm()
     rsm.diffThresh = 3.4
@@ -88,8 +88,8 @@ def test_set_rsm(device_in_service_mode):
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
-def test_set_rau(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_rau(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     am_dev = get_am_dev(dev)
     rau = am_dev.get_rau_support_vector_control()
     rau.minWest = 1
@@ -113,8 +113,8 @@ def test_set_rau(device_in_service_mode):
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
-def test_set_color_control(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_color_control(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     am_dev = get_am_dev(dev)
     color_control = am_dev.get_color_control()
     color_control.disableSADColor = 1
@@ -132,8 +132,8 @@ def test_set_color_control(device_in_service_mode):
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
-def test_set_rau_thresholds_control(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_rau_thresholds_control(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     am_dev = get_am_dev(dev)
     rau_tc = am_dev.get_rau_thresholds_control()
     rau_tc.rauDiffThresholdRed = 10
@@ -147,8 +147,8 @@ def test_set_rau_thresholds_control(device_in_service_mode):
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
-def test_set_slo_color_thresholds_control(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_slo_color_thresholds_control(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     am_dev = get_am_dev(dev)
     slo_ctc = am_dev.get_slo_color_thresholds_control()
     slo_ctc.diffThresholdRed = 1
@@ -162,8 +162,8 @@ def test_set_slo_color_thresholds_control(device_in_service_mode):
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
-def test_set_slo_penalty_control(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_slo_penalty_control(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     am_dev = get_am_dev(dev)
     slo_pc = am_dev.get_slo_penalty_control()
     slo_pc.sloK1Penalty = 1
@@ -183,8 +183,8 @@ def test_set_slo_penalty_control(device_in_service_mode):
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
-def test_set_hdad(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_hdad(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     am_dev = get_am_dev(dev)
     hdad = am_dev.get_hdad()
     hdad.lambdaCensus = 1.1
@@ -198,8 +198,8 @@ def test_set_hdad(device_in_service_mode):
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
-def test_set_color_correction(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_color_correction(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     am_dev = get_am_dev(dev)
     cc = am_dev.get_color_correction()
     cc.colorCorrection1 = -0.1
@@ -231,8 +231,8 @@ def test_set_color_correction(device_in_service_mode):
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
-def test_set_ae_control(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_ae_control(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     am_dev = get_am_dev(dev)
     aec = am_dev.get_ae_control()
     aec.meanIntensitySetPoint = 1234
@@ -242,8 +242,8 @@ def test_set_ae_control(device_in_service_mode):
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
-def test_set_depth_table(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_depth_table(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     am_dev = get_am_dev(dev)
     dt = am_dev.get_depth_table()
     dt.depthUnits = 100
@@ -261,8 +261,8 @@ def test_set_depth_table(device_in_service_mode):
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
-def test_set_census(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_census(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     am_dev = get_am_dev(dev)
     census = am_dev.get_census()
     census.uDiameter = 5
@@ -274,8 +274,8 @@ def test_set_census(device_in_service_mode):
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
-def test_set_amp_factor(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_set_amp_factor(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     am_dev = get_am_dev(dev)
     af = am_dev.get_amp_factor()
     af.a_factor = 0.12
@@ -285,8 +285,8 @@ def test_set_amp_factor(device_in_service_mode):
 
 
 @pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
-def test_return_to_default_visual_preset(device_in_service_mode):
-    dev, ctx = device_in_service_mode
+def test_return_to_default_visual_preset(test_device_wrapped):
+    dev, ctx = test_device_wrapped
     depth_sensor = dev.first_depth_sensor()
     depth_sensor.set_option(rs.option.visual_preset, int(rs.rs400_visual_preset.default))
     assert depth_sensor.get_option(rs.option.visual_preset) == rs.rs400_visual_preset.default

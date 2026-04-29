@@ -4,6 +4,7 @@
 import pytest
 import pyrealsense2 as rs
 import logging
+from pytest_check import check
 log = logging.getLogger(__name__)
 
 pytestmark = [
@@ -42,10 +43,10 @@ color_metadata = [
 
 def check_option_and_metadata_values(color_sensor, option, metadata, value_to_set, frame):
     changed = color_sensor.get_option(option)
-    assert changed == value_to_set, f"Option {option}: expected {value_to_set}, got {changed}"
+    check.equal(changed, value_to_set, f"Option {option}: expected {value_to_set}, got {changed}")
     if frame.supports_frame_metadata(metadata):
         changed_md = float(frame.get_frame_metadata(metadata))
-        assert changed_md == value_to_set, f"Metadata {metadata}: expected {value_to_set}, got {changed_md}"
+        check.equal(changed_md, value_to_set, f"Metadata {metadata}: expected {value_to_set}, got {changed_md}")
     else:
         log.debug(f"metadata {metadata!r} not supported")
 
@@ -56,14 +57,11 @@ def test_rgb_options_metadata_consistency(test_device):
 
     color_sensor = dev.first_color_sensor()
 
-    # Using a profile common to known cameras
     color_profile = next(
         (p for p in color_sensor.profiles
-         if p.fps() == 30
+         if p.fps() == 30 # For faster run times, lower FPS will work as well but will increase run time
          and p.stream_type() == rs.stream.color
-         and p.format() == rs.format.yuyv
-         and p.as_video_stream_profile().width() == 640
-         and p.as_video_stream_profile().height() == 480),
+         and p.format() == rs.format.rgb8), # Make sure no raw or calibration profile selected, SDK converts native camera format to this common format.
         None
     )
     assert color_profile is not None, "Required 640x480@30fps YUYV color profile not available"

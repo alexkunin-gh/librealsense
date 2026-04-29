@@ -524,24 +524,46 @@ def test_context_var():
     return context_list
 
 
+@pytest.fixture(scope="module")
+def _safety_mode_state():
+    """Module-scoped state holder for D585S service mode, keyed by device serial number.
+
+    Each serial gets its own entry so that multiple D585S cameras in the same module
+    (e.g. via device_each) are each entered into service mode independently.
+    Teardown runs once at module end, restoring run mode for every camera that was entered.
+    """
+    state = {}  # serial_number -> {'sensor': ..., 'entered': False}
+    yield state
+    for sn, entry in state.items():
+        if entry['entered'] and entry['sensor'] is not None:
+            try:
+                entry['sensor'].set_option(rs.option.safety_mode, rs.safety_mode.run)
+            except Exception as e:
+                # Don't throw on cleanup failure, to not mask test failures and also after test device is usually reset.
+                log.error(f"safety_mode restore failed for {sn}: {e}")
+
+
 @pytest.fixture
-def device_in_service_mode(test_device):
-    """Like test_device, but puts D585S into service mode for the duration of the test.
+def test_device_wrapped(test_device, _safety_mode_state):
+    """Like test_device, but puts D585S into service mode once per module per device.
 
     Many option-setting operations on D585S require service mode. No-op for all other
-    device families.
+    device families. Service mode is entered on the first test in the module that uses
+    this fixture for a given serial, and restored once at module teardown — not toggled
+    per test case. Multiple D585S cameras are each tracked independently by serial.
     """
     dev, ctx = test_device
     is_d585s = dev.supports(rs.camera_info.name) and "D585S" in dev.get_info(rs.camera_info.name)
     if is_d585s:
-        safety_sensor = dev.first_safety_sensor()
-        safety_sensor.set_option(rs.option.safety_mode, rs.safety_mode.service)
-        # Will throw on failure to get sensor or set option, this is intentional so we won't return a device and fail the calling test.
-    yield dev, ctx
-    if is_d585s:
-        try:
+        sn = dev.get_info(rs.camera_info.serial_number)
+        if sn not in _safety_mode_state:
+            _safety_mode_state[sn] = {'sensor': None, 'entered': False}
+        entry = _safety_mode_state[sn]
+        if not entry['entered']:
             safety_sensor = dev.first_safety_sensor()
-            safety_sensor.set_option(rs.option.safety_mode, rs.safety_mode.run)
-        except Exception as e:
-            # Don't throw on cleanup failure, to not mask test failures and also after test device is usually reset.
-            log.error(f"Cleanup failed: could not set safety_mode back to run: {e}")
+            if safety_sensor.get_option(rs.option.safety_mode) != rs.safety_mode.service:
+                # Will throw on failure — intentional so we fail the test rather than run without service mode.
+                safety_sensor.set_option(rs.option.safety_mode, rs.safety_mode.service)
+            entry['sensor'] = safety_sensor
+            entry['entered'] = True
+    yield dev, ctx

@@ -13,20 +13,28 @@ pytestmark = [
     pytest.mark.context("nightly"),
 ]
 
+changed_options = 0
+_depth_sensor = None  # module-level ref; cleared before each test to release old subscription
 
-def make_callback(get_sensor):
-    """Return a (callback, count) pair. get_sensor() returns the current sensor,
-    used to skip read-only options (e.g. temperature) that may change spuriously."""
-    count = [0]
 
-    def notification_callback(opt_list):
-        log.debug(f"notification_callback called with {len(opt_list)} options")
-        for opt in opt_list:
-            log.debug(f"    {opt.id} -> {opt.value}")
-            if not get_sensor().is_option_read_only(opt.id):  # Ignore accidental temperature changes
-                count[0] += 1
+def _notification_callback(opt_list):
+    global changed_options
+    log.debug(f"notification_callback called with {len(opt_list)} options")
+    for opt in opt_list:
+        log.debug(f"    {opt.id} -> {opt.value}")
+        if _depth_sensor and not _depth_sensor.is_option_read_only(opt.id):  # Ignore accidental temperature changes
+            changed_options += 1
 
-    return notification_callback, count
+
+def setup_depth_watcher(test_device):
+    """Release old sensor subscription, zero changed_options, register watcher, return depth_sensor."""
+    global changed_options, _depth_sensor
+    _depth_sensor = None  # drop old sensor ref → GC → old callback subscription cancelled
+    changed_options = 0
+    dev, ctx = test_device
+    _depth_sensor = dev.first_depth_sensor()
+    _depth_sensor.on_options_changed(_notification_callback)
+    return _depth_sensor
 
 
 def test_disable_auto_exposure(test_device):
@@ -39,23 +47,17 @@ def test_disable_auto_exposure(test_device):
 
 
 def test_set_one_option(test_device):
-    dev, ctx = test_device
-    depth_sensor = dev.first_depth_sensor()
-    callback, count = make_callback(lambda: depth_sensor)
-    depth_sensor.on_options_changed(callback)
+    depth_sensor = setup_depth_watcher(test_device)
 
     current_gain = depth_sensor.get_option(rs.option.gain)
     depth_sensor.set_option(rs.option.gain, current_gain + 1)
     assert depth_sensor.get_option(rs.option.gain) == current_gain + 1
     time.sleep(1.5)  # default options-watcher update interval is 1 second
-    assert count[0] == 1
+    assert changed_options == 1
 
 
 def test_set_multiple_options(test_device):
-    dev, ctx = test_device
-    depth_sensor = dev.first_depth_sensor()
-    callback, count = make_callback(lambda: depth_sensor)
-    depth_sensor.on_options_changed(callback)
+    depth_sensor = setup_depth_watcher(test_device)
 
     current_gain = depth_sensor.get_option(rs.option.gain)
     depth_sensor.set_option(rs.option.gain, current_gain + 1)
@@ -64,28 +66,25 @@ def test_set_multiple_options(test_device):
     depth_sensor.set_option(rs.option.exposure, current_exposure + 1)
     assert depth_sensor.get_option(rs.option.exposure) == current_exposure + 1
     time.sleep(2.5)  # default options-watcher update interval is 1 second, multiple options might be updated on different intervals
-    assert count[0] == 2
+    assert changed_options == 2
 
 
 def test_no_sporadic_changes(test_device):
-    dev, ctx = test_device
-    depth_sensor = dev.first_depth_sensor()
-    callback, count = make_callback(lambda: depth_sensor)
-    depth_sensor.on_options_changed(callback)
+    setup_depth_watcher(test_device)
 
     time.sleep(3)
-    assert count[0] == 0
+    assert changed_options == 0
 
 
 def test_cancel_subscription(test_device):
-    dev, ctx = test_device
-    depth_sensor = dev.first_depth_sensor()
-    callback, count = make_callback(lambda: depth_sensor)
-    depth_sensor.on_options_changed(callback)
+    global _depth_sensor
+    setup_depth_watcher(test_device)
 
-    depth_sensor = dev.first_depth_sensor()  # Get new sensor, old sensor subscription is canceled
+    _depth_sensor = None  # release sensor, cancelling its subscription
+    dev, ctx = test_device
+    depth_sensor = dev.first_depth_sensor()  # new sensor, no callback registered
     current_gain = depth_sensor.get_option(rs.option.gain)
     depth_sensor.set_option(rs.option.gain, current_gain + 1)
     assert depth_sensor.get_option(rs.option.gain) == current_gain + 1
     time.sleep(1.5)  # default options-watcher update interval is 1 second
-    assert count[0] == 0
+    assert changed_options == 0

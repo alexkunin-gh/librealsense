@@ -50,32 +50,28 @@ def set_and_verify_timestamp_domain(sensor, frame_queue, global_time_enabled: bo
     assert frame.get_frame_timestamp_domain() == expected_ts_domain
 
 
+def _run_timestamp_domain_test(sensor, stream_type, global_time_enabled):
+    """Open sensor, verify timestamp domain, then close."""
+    profile = next(p for p in sensor.profiles if p.stream_type() == stream_type and p.is_default())
+    frame_queue = rs.frame_queue(queue_capacity, keep_frames=False)
+    sensor.open(profile)
+    sensor.start(frame_queue)
+    try:
+        set_and_verify_timestamp_domain(sensor, frame_queue, global_time_enabled)
+    finally:
+        close_resources(sensor)
+
+
 def test_depth_timestamp_domain_off(test_device):
     device, ctx = test_device
-    depth_sensor = device.first_depth_sensor()
-    depth_profile = next(p for p in depth_sensor.profiles if p.stream_type() == rs.stream.depth and p.is_default())
-    depth_frame_queue = rs.frame_queue(queue_capacity, keep_frames=False)
-    depth_sensor.open(depth_profile)
-    depth_sensor.start(depth_frame_queue)
-    try:
-        log.info('Check setting global time domain: depth sensor - timestamp domain is OFF')
-        set_and_verify_timestamp_domain(depth_sensor, depth_frame_queue, False)
-    finally:
-        close_resources(depth_sensor)
+    log.info('Check setting global time domain: depth sensor - timestamp domain is OFF')
+    _run_timestamp_domain_test(device.first_depth_sensor(), rs.stream.depth, False)
 
 
 def test_depth_timestamp_domain_on(test_device):
     device, ctx = test_device
-    depth_sensor = device.first_depth_sensor()
-    depth_profile = next(p for p in depth_sensor.profiles if p.stream_type() == rs.stream.depth and p.is_default())
-    depth_frame_queue = rs.frame_queue(queue_capacity, keep_frames=False)
-    depth_sensor.open(depth_profile)
-    depth_sensor.start(depth_frame_queue)
-    try:
-        log.info('Check setting global time domain: depth sensor - timestamp domain is ON')
-        set_and_verify_timestamp_domain(depth_sensor, depth_frame_queue, True)
-    finally:
-        close_resources(depth_sensor)
+    log.info('Check setting global time domain: depth sensor - timestamp domain is ON')
+    _run_timestamp_domain_test(device.first_depth_sensor(), rs.stream.depth, True)
 
 
 def test_color_timestamp_domain_off(test_device):
@@ -87,15 +83,8 @@ def test_color_timestamp_domain_off(test_device):
         if 'D421' in product_name or 'D405' in product_name:  # Cameras with no color sensor may fail.
             pytest.skip("No color sensor")
         raise
-    color_profile = next(p for p in color_sensor.profiles if p.stream_type() == rs.stream.color and p.is_default())
-    color_frame_queue = rs.frame_queue(queue_capacity, keep_frames=False)
-    color_sensor.open(color_profile)
-    color_sensor.start(color_frame_queue)
-    try:
-        log.info('Check setting global time domain: color sensor - timestamp domain is OFF')
-        set_and_verify_timestamp_domain(color_sensor, color_frame_queue, False)
-    finally:
-        close_resources(color_sensor)
+    log.info('Check setting global time domain: color sensor - timestamp domain is OFF')
+    _run_timestamp_domain_test(color_sensor, rs.stream.color, False)
 
 
 def test_color_timestamp_domain_on(test_device):
@@ -107,12 +96,5 @@ def test_color_timestamp_domain_on(test_device):
         if 'D421' in product_name or 'D405' in product_name:  # Cameras with no color sensor may fail.
             pytest.skip("No color sensor")
         raise
-    color_profile = next(p for p in color_sensor.profiles if p.stream_type() == rs.stream.color and p.is_default())
-    color_frame_queue = rs.frame_queue(queue_capacity, keep_frames=False)
-    color_sensor.open(color_profile)
-    color_sensor.start(color_frame_queue)
-    try:
-        log.info('Check setting global time domain: color sensor - timestamp domain is ON')
-        set_and_verify_timestamp_domain(color_sensor, color_frame_queue, True)
-    finally:
-        close_resources(color_sensor)
+    log.info('Check setting global time domain: color sensor - timestamp domain is ON')
+    _run_timestamp_domain_test(color_sensor, rs.stream.color, True)

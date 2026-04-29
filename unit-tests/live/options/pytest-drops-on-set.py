@@ -63,9 +63,11 @@ class FrameDropChecker:
 
 def set_new_value(checker, sensor, option, value):
     checker._after_set_option = True
-    sensor.set_option(option, value)
-    time.sleep(0.5)  # collect frames
-    checker._after_set_option = False
+    try:
+        sensor.set_option(option, value)
+        time.sleep(0.5)  # collect frames
+    finally:
+        checker._after_set_option = False
 
 
 def run_option_changes(sensor, checker, product_line):
@@ -90,9 +92,9 @@ def run_option_changes(sensor, checker, product_line):
             pytest.fail(f"Exception while setting option {option}: {e}")
 
 
-def test_laser_power_frame_drops(device_in_service_mode):
+def test_laser_power_frame_drops(test_device_wrapped):
     """No frame drops when sweeping laser power through its full range."""
-    dev, ctx = device_in_service_mode
+    dev, ctx = test_device_wrapped
     product_line = dev.get_info(rs.camera_info.product_line)
     depth_sensor = dev.first_depth_sensor()
     depth_profile = next(p for p in depth_sensor.profiles if p.is_default())
@@ -115,9 +117,9 @@ def test_laser_power_frame_drops(device_in_service_mode):
     checker.assert_no_errors()
 
 
-def test_depth_options_frame_drops(device_in_service_mode):
+def test_depth_options_frame_drops(test_device_wrapped):
     """No frame drops when cycling through all writable depth sensor options."""
-    dev, ctx = device_in_service_mode
+    dev, ctx = test_device_wrapped
     product_line = dev.get_info(rs.camera_info.product_line)
     depth_sensor = dev.first_depth_sensor()
     depth_profile = next(p for p in depth_sensor.profiles if p.is_default())
@@ -135,9 +137,9 @@ def test_depth_options_frame_drops(device_in_service_mode):
     checker.assert_no_errors()
 
 
-def test_color_options_frame_drops(device_in_service_mode):
+def test_color_options_frame_drops(test_device_wrapped):
     """No frame drops when cycling through all writable color sensor options."""
-    dev, ctx = device_in_service_mode
+    dev, ctx = test_device_wrapped
     product_line = dev.get_info(rs.camera_info.product_line)
     product_name = dev.get_info(rs.camera_info.name)
 

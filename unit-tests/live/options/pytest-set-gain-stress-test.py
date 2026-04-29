@@ -22,9 +22,9 @@ TEST_ITERATIONS = 200
 GAIN_VALUES = [16, 74, 132, 190, 248]
 
 
-def test_set_gain_stress(device_in_service_mode):
+def test_set_gain_stress(test_device_wrapped):
     """Stress test for setting a PU (gain) option — no exception should be thrown [RSDSO-17185]."""
-    dev, ctx = device_in_service_mode
+    dev, ctx = test_device_wrapped
     time.sleep(3)  # The device starts at D0 (Operational) state, allow time for it to get into idle state
 
     depth_ir_sensor = dev.first_depth_sensor()
