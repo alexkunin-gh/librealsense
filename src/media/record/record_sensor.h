@@ -8,7 +8,6 @@
 #include "archive.h"
 #include "sensor.h"
 
-#include <atomic>
 #include <memory>
 #include <mutex>
 #include <set>
@@ -71,7 +70,6 @@ namespace librealsense
         std::function< void( frame_holder ) > _on_frame;
         std::function< void( rs2_extension, std::shared_ptr< extension_snapshot > ) > _on_extension_change;
 
-        template <typename T> void record_snapshot(rs2_extension extension_type, const librealsense::recordable<T>& snapshot);
         void record_frame(frame_holder holder);
         void enable_sensor_hooks();
         void disable_sensor_hooks();
@@ -97,15 +95,15 @@ namespace librealsense
         bool m_register_notification_to_base;
         std::mutex m_mutex;
 
-        // Shared with every lambda this sensor registers on longer-lived objects
-        // (the live sensor's notifications dispatcher, individual options'
-        // on-change callbacks). The destructor takes the mutex and sets alive=false,
-        // so any in-flight invocation drains before the destructor returns and any
-        // future invocation bails out without dereferencing *this.
+        // Shared with every lambda this sensor registers on longer-lived objects (the
+        // live sensor's notifications dispatcher, individual options' on-change callbacks).
+        // The destructor takes the mutex and sets alive=false, so any in-flight invocation
+        // drains before the destructor returns and any future invocation bails out without
+        // dereferencing *this.
         struct callback_lifetime
         {
-            std::atomic_bool alive{ true };
             std::mutex mutex;
+            bool alive = true;
         };
         std::shared_ptr< callback_lifetime > m_callback_lifetime;
     };
