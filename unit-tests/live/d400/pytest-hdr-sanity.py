@@ -14,7 +14,9 @@ pytestmark = [pytest.mark.device("D400*")]
 def _disable_hdr(test_device):
     yield
     dev, _ = test_device
-    dev.first_depth_sensor().set_option(rs.option.hdr_enabled, 0)
+    depth_sensor = dev.first_depth_sensor()
+    if depth_sensor and depth_sensor.supports(rs.option.hdr_enabled):
+        depth_sensor.set_option(rs.option.hdr_enabled, 0)
 
 
 def test_hdr_streaming_custom_config(test_device):
