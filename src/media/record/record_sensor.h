@@ -8,6 +8,8 @@
 #include "archive.h"
 #include "sensor.h"
 
+#include <atomic>
+#include <memory>
 #include <set>
 
 
@@ -93,6 +95,9 @@ namespace librealsense
         bool m_is_sensor_hooked;
         bool m_register_notification_to_base;
         std::mutex m_mutex;
+        // Shared with the notifications-callback lambda owned by the live sensor (which
+        // outlives this wrapper); the destructor sets it false so a late dispatch becomes a no-op.
+        std::shared_ptr< std::atomic_bool > m_alive;
     };
 
     class notification_callback : public rs2_notifications_callback

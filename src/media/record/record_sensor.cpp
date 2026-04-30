@@ -21,13 +21,20 @@ librealsense::record_sensor::record_sensor( device_interface& device,
     m_parent_device(device),
     m_is_sensor_hooked(false),
     m_register_notification_to_base(true),
-    m_before_start_callback_token(-1)
+    m_before_start_callback_token(-1),
+    m_alive(std::make_shared<std::atomic_bool>(true))
 {
     LOG_DEBUG("Created record_sensor");
 }
 
 librealsense::record_sensor::~record_sensor()
 {
+    // Disarm the live-sensor notifications lambda before tearing anything down: it
+    // may be invoked concurrently on the dispatcher thread, and disable_sensor_hooks
+    // below replaces the live sensor's callback (synchronously stopping the dispatcher),
+    // but a late raise can race with the destructor entry.
+    m_alive->store(false, std::memory_order_release);
+
     m_sensor.unregister_before_start_callback(m_before_start_callback_token);
     disable_sensor_options_recording();
     disable_sensor_hooks();
@@ -106,15 +113,23 @@ void librealsense::record_sensor::register_notifications_callback( rs2_notificat
     }
 
     m_user_notification_callback = std::move(callback);
-    auto from_live_sensor = rs2_notifications_callback_sptr(new notification_callback([&](rs2_notification* n)
+
+    // Capture by value: the lambda is owned by m_sensor (which outlives *this), so it
+    // must not capture references into *this. The shared_ptr<atomic_bool> sentinel lets
+    // a late dispatch detect that the wrapper has been destroyed and bail out safely.
+    auto alive = m_alive;
+    auto self = this;
+    auto from_live_sensor = rs2_notifications_callback_sptr(new notification_callback([alive, self](rs2_notification* n)
     {
-        if (m_is_recording)
+        if (!alive->load(std::memory_order_acquire))
+            return;
+        if (self->m_is_recording)
         {
-            _on_notification( *( n->_notification ) );
+            self->_on_notification( *( n->_notification ) );
         }
-        if (m_user_notification_callback)
+        if (self->m_user_notification_callback)
         {
-            m_user_notification_callback->on_notification(n);
+            self->m_user_notification_callback->on_notification(n);
         }
     }), [](rs2_notifications_callback* p) { p->release(); });
     m_sensor.register_notifications_callback(std::move(from_live_sensor));
@@ -311,10 +326,10 @@ rs2_frame_callback_sptr librealsense::record_sensor::wrap_frame_callback( rs2_fr
 }
 void record_sensor::unhook_sensor_callbacks()
 {
-    if (m_user_notification_callback)
-    {
-        m_sensor.register_notifications_callback(m_user_notification_callback);
-    }
+    // Always restore (possibly null) so our wrapper lambda is removed from the live
+    // sensor's notifications dispatcher; otherwise it would keep being invoked after
+    // *this is destroyed, dereferencing freed memory.
+    m_sensor.register_notifications_callback(m_user_notification_callback);
 
     if (m_original_callback)
     {
