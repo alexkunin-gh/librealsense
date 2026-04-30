@@ -26,11 +26,17 @@ namespace librealsense
         virtual ~record_sensor();
 
         void on_notification( std::function< void( const notification & ) > && callback )
-            { _on_notification = std::move( callback ); }
+        {
+            std::lock_guard< std::mutex > lock( m_callback_lifetime->mutex );
+            _on_notification = std::move( callback );
+        }
         void on_frame( std::function< void( frame_holder ) > && callback )
             { _on_frame = std::move( callback ); }
         void on_extension_change( std::function< void( rs2_extension, std::shared_ptr< extension_snapshot > ) > && callback )
-            { _on_extension_change = std::move( callback ); }
+        {
+            std::lock_guard< std::mutex > lock( m_callback_lifetime->mutex );
+            _on_extension_change = std::move( callback );
+        }
 
         void init();
         stream_profiles get_stream_profiles(int tag = profile_tag::PROFILE_TAG_ANY) const override;

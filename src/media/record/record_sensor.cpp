@@ -113,7 +113,10 @@ void librealsense::record_sensor::register_notifications_callback( rs2_notificat
         return;
     }
 
-    m_user_notification_callback = std::move(callback);
+    {
+        std::lock_guard< std::mutex > lock( m_callback_lifetime->mutex );
+        m_user_notification_callback = std::move(callback);
+    }
 
     // The lambda is owned by m_sensor (which outlives *this), so it must not capture
     // references into *this. Under the lifetime mutex we check the sentinel and snapshot
@@ -249,12 +252,17 @@ void record_sensor::unregister_before_start_callback(int token)
 void record_sensor::stop_with_error(const std::string& error_msg)
 {
     disable_recording();
-    if (m_user_notification_callback)
+    rs2_notifications_callback_sptr user_cb;
+    {
+        std::lock_guard< std::mutex > lock( m_callback_lifetime->mutex );
+        user_cb = m_user_notification_callback;
+    }
+    if (user_cb)
     {
         std::string msg = rsutils::string::from() << "Stopping recording for sensor (streaming will continue). (Error: " << error_msg << ")";
         notification noti(RS2_NOTIFICATION_CATEGORY_UNKNOWN_ERROR, 0, RS2_LOG_SEVERITY_ERROR, msg);
         rs2_notification rs2_noti(&noti);
-        m_user_notification_callback->on_notification(&rs2_noti);
+        user_cb->on_notification(&rs2_noti);
     }
 }
 
@@ -298,7 +306,10 @@ void record_sensor::disable_sensor_hooks()
 void record_sensor::hook_sensor_callbacks()
 {
     m_register_notification_to_base = false;
-    m_user_notification_callback = m_sensor.get_notifications_callback();
+    {
+        std::lock_guard< std::mutex > lock( m_callback_lifetime->mutex );
+        m_user_notification_callback = m_sensor.get_notifications_callback();
+    }
     register_notifications_callback(m_user_notification_callback);
     m_original_callback = m_sensor.get_frames_callback();
     if (m_original_callback)
