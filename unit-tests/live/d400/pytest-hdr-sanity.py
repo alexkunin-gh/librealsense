@@ -21,7 +21,8 @@ def test_hdr_streaming_custom_config(test_device):
     dev, ctx = test_device
     depth_sensor = dev.first_depth_sensor()
 
-    assert depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)
+    if not (depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)):
+        pytest.skip("HDR not supported on this device")
 
     depth_sensor.set_option(rs.option.sequence_size, 2)
     check.is_true(depth_sensor.get_option(rs.option.sequence_size) == 2)

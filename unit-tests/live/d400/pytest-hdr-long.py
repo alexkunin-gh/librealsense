@@ -49,7 +49,8 @@ def test_hdr_config_default_config(test_device):
     _skip_if_fw_unsupported(dev)
     depth_sensor = dev.first_depth_sensor()
 
-    assert depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)
+    if not (depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)):
+        pytest.skip("HDR not supported on this device")
     exposure_range = depth_sensor.get_option_range(rs.option.exposure)
     gain_range = depth_sensor.get_option_range(rs.option.gain)
 
@@ -77,7 +78,8 @@ def test_hdr_config_custom_config(test_device):
     _skip_if_fw_unsupported(dev)
     depth_sensor = dev.first_depth_sensor()
 
-    assert depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)
+    if not (depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)):
+        pytest.skip("HDR not supported on this device")
     depth_sensor.set_option(rs.option.sequence_size, 2)
     assert depth_sensor.get_option(rs.option.sequence_size) == 2
 
@@ -105,7 +107,8 @@ def test_hdr_config_custom_config(test_device):
 def _hdr_streaming_default_config(dev, ctx):
     depth_sensor = dev.first_depth_sensor()
 
-    assert depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)
+    if not (depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)):
+        pytest.skip("HDR not supported on this device")
     exposure_range = depth_sensor.get_option_range(rs.option.exposure)
     gain_range = depth_sensor.get_option_range(rs.option.gain)
 
@@ -147,7 +150,8 @@ def test_hdr_streaming_default_config(test_device):
 def _hdr_running_restart_hdr_at_restream(dev, ctx):
     depth_sensor = dev.first_depth_sensor()
 
-    assert depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)
+    if not (depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)):
+        pytest.skip("HDR not supported on this device")
     cfg = rs.config()
     cfg.enable_stream(rs.stream.depth)
     pipe = rs.pipeline(ctx)
@@ -235,7 +239,8 @@ def _check_hdr_frame_counter(pipe, num_of_frames, merging_filter):
 def _hdr_running_hdr_merge_after_hdr_restart(dev, ctx):
     depth_sensor = dev.first_depth_sensor()
 
-    assert depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)
+    if not (depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)):
+        pytest.skip("HDR not supported on this device")
     # initializing the merging filter
     merging_filter = rs.hdr_merge()
 
@@ -336,7 +341,8 @@ def _check_sequence_id(pipe):
 def _hdr_streaming_checking_sequence_id(dev, ctx):
     depth_sensor = dev.first_depth_sensor()
 
-    assert depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)
+    if not (depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)):
+        pytest.skip("HDR not supported on this device")
     cfg = rs.config()
     cfg.enable_stream(rs.stream.depth)
     cfg.enable_stream(rs.stream.infrared, 1)
@@ -389,7 +395,8 @@ def test_emitter_on_off_checking_sequence_id(test_device):
 def _hdr_merge_discard_merged_frame(dev, ctx):
     depth_sensor = dev.first_depth_sensor()
 
-    assert depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)
+    if not (depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)):
+        pytest.skip("HDR not supported on this device")
     depth_sensor.set_option(rs.option.hdr_enabled, 1)
     assert depth_sensor.get_option(rs.option.hdr_enabled) == 1
 
@@ -456,7 +463,8 @@ def test_hdr_merge_discard_merged_frame(test_device):
 
 def _hdr_start_stop_recover_manual_exposure_and_gain(dev, ctx):
     depth_sensor = dev.first_depth_sensor()
-    assert depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)
+    if not (depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)):
+        pytest.skip("HDR not supported on this device")
 
     gain_before_hdr = 50
     depth_sensor.set_option(rs.option.gain, gain_before_hdr)
@@ -513,7 +521,8 @@ def test_hdr_start_stop_recover_manual_exposure_and_gain(test_device):
 def _hdr_active_set_locked_options(dev, ctx):
     depth_sensor = dev.first_depth_sensor()
 
-    assert depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)
+    if not (depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)):
+        pytest.skip("HDR not supported on this device")
     # setting laser ON
     if depth_sensor.supports(rs.option.emitter_enabled):
         depth_sensor.set_option(rs.option.emitter_enabled, 1)
@@ -555,7 +564,8 @@ def test_hdr_active_set_locked_options(test_device):
 
 def _hdr_streaming_set_locked_options(dev, ctx):
     depth_sensor = dev.first_depth_sensor()
-    assert depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)
+    if not (depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)):
+        pytest.skip("HDR not supported on this device")
     # setting laser ON
     depth_sensor.set_option(rs.option.emitter_enabled, 1)
     laser_power_before_hdr = depth_sensor.get_option(rs.option.laser_power)
@@ -600,7 +610,8 @@ def test_hdr_streaming_set_locked_options(test_device):
 def _hdr_streaming_enable_runtime_exposure_update(dev, ctx):
     depth_sensor = dev.first_depth_sensor()
 
-    assert depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)
+    if not (depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)):
+        pytest.skip("HDR not supported on this device")
     exposure_range = depth_sensor.get_option_range(rs.option.exposure)
     gain_range = depth_sensor.get_option_range(rs.option.gain)
 
