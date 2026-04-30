@@ -117,23 +117,32 @@ void librealsense::record_sensor::register_notifications_callback( rs2_notificat
     m_user_notification_callback = std::move(callback);
 
     // The lambda is owned by m_sensor (which outlives *this), so it must not capture
-    // references into *this. The lifetime sentinel lets a late dispatch detect that the
-    // wrapper has been destroyed (and the destructor's mutex acquisition guarantees no
-    // in-flight invocation of this body survives past ~record_sensor()).
+    // references into *this. Under the lifetime mutex we (a) check the sentinel and
+    // (b) snapshot the members the body needs; we then drop the lock before invoking
+    // any user callback. This keeps the critical section O(few copies) and ensures
+    // no user code runs while the destructor is waiting on the mutex.
     auto lifetime = m_callback_lifetime;
     auto self = this;
     auto from_live_sensor = rs2_notifications_callback_sptr(new notification_callback([lifetime, self](rs2_notification* n)
     {
-        std::lock_guard< std::mutex > lock( lifetime->mutex );
-        if (!lifetime->alive.load(std::memory_order_acquire))
-            return;
-        if (self->m_is_recording)
+        bool is_recording_local;
+        std::function< void( const notification & ) > on_notification_local;
+        rs2_notifications_callback_sptr user_cb_local;
         {
-            self->_on_notification( *( n->_notification ) );
+            std::lock_guard< std::mutex > lock( lifetime->mutex );
+            if (!lifetime->alive.load(std::memory_order_acquire))
+                return;
+            is_recording_local = self->m_is_recording;
+            on_notification_local = self->_on_notification;
+            user_cb_local = self->m_user_notification_callback;
         }
-        if (self->m_user_notification_callback)
+        if (is_recording_local && on_notification_local)
         {
-            self->m_user_notification_callback->on_notification(n);
+            on_notification_local( *( n->_notification ) );
+        }
+        if (user_cb_local)
+        {
+            user_cb_local->on_notification(n);
         }
     }), [](rs2_notifications_callback* p) { p->release(); });
     m_sensor.register_notifications_callback(std::move(from_live_sensor));
@@ -360,19 +369,30 @@ void record_sensor::enable_sensor_options_recording()
         {
             auto& opt = m_sensor.get_option(id);
             // Same lifetime concern as the notifications lambda above: the option owns
-            // this callback and may invoke it concurrently with ~record_sensor(). Pass
-            // the lifetime sentinel by value and gate the body on it.
+            // this callback and may invoke it concurrently with ~record_sensor(). Snapshot
+            // what we need under the lifetime mutex, drop the lock, then run the rest
+            // (including the user-supplied _on_extension_change callback) without it.
             auto lifetime = m_callback_lifetime;
             auto self = this;
             opt.enable_recording([lifetime, self, id](const librealsense::option& option) {
-                std::lock_guard< std::mutex > lock( lifetime->mutex );
-                if (!lifetime->alive.load(std::memory_order_acquire))
+                bool is_recording_local;
+                std::function< void( rs2_extension, std::shared_ptr< extension_snapshot > ) > on_extension_change_local;
+                {
+                    std::lock_guard< std::mutex > lock( lifetime->mutex );
+                    if (!lifetime->alive.load(std::memory_order_acquire))
+                        return;
+                    is_recording_local = self->m_is_recording;
+                    on_extension_change_local = self->_on_extension_change;
+                }
+                if (!is_recording_local || !on_extension_change_local)
                     return;
                 options_container options;
                 std::shared_ptr<librealsense::option> option_snapshot;
                 option.create_snapshot(option_snapshot);
                 options.register_option(id, option_snapshot);
-                self->record_snapshot<options_interface>(RS2_EXTENSION_OPTIONS, options);
+                std::shared_ptr< options_interface > options_snapshot;
+                options.create_snapshot( options_snapshot );
+                on_extension_change_local( RS2_EXTENSION_OPTIONS, As< extension_snapshot >( options_snapshot ) );
             });
             m_recording_options.insert(id);
         }
