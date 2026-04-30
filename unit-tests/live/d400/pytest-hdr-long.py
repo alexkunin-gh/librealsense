@@ -369,7 +369,8 @@ def test_hdr_streaming_checking_sequence_id(test_device):
 def _emitter_on_off_check_sequence_id(dev, ctx):
     depth_sensor = dev.first_depth_sensor()
 
-    assert depth_sensor and depth_sensor.supports(rs.option.emitter_on_off)
+    if not (depth_sensor and depth_sensor.supports(rs.option.emitter_on_off)):
+        pytest.skip("Emitter on/off not supported on this device")
     cfg = rs.config()
     cfg.enable_stream(rs.stream.depth)
     cfg.enable_stream(rs.stream.infrared, 1)
@@ -523,9 +524,12 @@ def _hdr_active_set_locked_options(dev, ctx):
 
     if not (depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)):
         pytest.skip("HDR not supported on this device")
+    
+    if not depth_sensor.supports(rs.option.emitter_enabled):
+        pytest.skip("Emitter enabled option not supported on this device")
+    
     # setting laser ON
-    if depth_sensor.supports(rs.option.emitter_enabled):
-        depth_sensor.set_option(rs.option.emitter_enabled, 1)
+    depth_sensor.set_option(rs.option.emitter_enabled, 1)
 
     assert depth_sensor.supports(rs.option.laser_power)
     laser_power_before_hdr = depth_sensor.get_option(rs.option.laser_power)
@@ -566,6 +570,10 @@ def _hdr_streaming_set_locked_options(dev, ctx):
     depth_sensor = dev.first_depth_sensor()
     if not (depth_sensor and depth_sensor.supports(rs.option.hdr_enabled)):
         pytest.skip("HDR not supported on this device")
+    
+    if not depth_sensor.supports(rs.option.laser_power):
+        pytest.skip("Laser power option not supported on this device")
+    
     # setting laser ON
     depth_sensor.set_option(rs.option.emitter_enabled, 1)
     laser_power_before_hdr = depth_sensor.get_option(rs.option.laser_power)
