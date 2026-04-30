@@ -22,7 +22,6 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.skipif(is_jetson_platform(), reason="Not supported on Jetson"),
-    #pytest.mark.skip(reason="Disabled - stress test"),
     pytest.mark.device("D400*", "D400*"),
 ]
 
