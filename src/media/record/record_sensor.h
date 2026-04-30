@@ -10,6 +10,7 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <set>
 
 
@@ -95,9 +96,18 @@ namespace librealsense
         bool m_is_sensor_hooked;
         bool m_register_notification_to_base;
         std::mutex m_mutex;
-        // Shared with the notifications-callback lambda owned by the live sensor (which
-        // outlives this wrapper); the destructor sets it false so a late dispatch becomes a no-op.
-        std::shared_ptr< std::atomic_bool > m_alive;
+
+        // Shared with every lambda this sensor registers on longer-lived objects
+        // (the live sensor's notifications dispatcher, individual options'
+        // on-change callbacks). The destructor takes the mutex and sets alive=false,
+        // so any in-flight invocation drains before the destructor returns and any
+        // future invocation bails out without dereferencing *this.
+        struct callback_lifetime
+        {
+            std::atomic_bool alive{ true };
+            std::mutex mutex;
+        };
+        std::shared_ptr< callback_lifetime > m_callback_lifetime;
     };
 
     class notification_callback : public rs2_notifications_callback

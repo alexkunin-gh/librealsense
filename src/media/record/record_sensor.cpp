@@ -22,18 +22,20 @@ librealsense::record_sensor::record_sensor( device_interface& device,
     m_is_sensor_hooked(false),
     m_register_notification_to_base(true),
     m_before_start_callback_token(-1),
-    m_alive(std::make_shared<std::atomic_bool>(true))
+    m_callback_lifetime(std::make_shared<callback_lifetime>())
 {
     LOG_DEBUG("Created record_sensor");
 }
 
 librealsense::record_sensor::~record_sensor()
 {
-    // Disarm the live-sensor notifications lambda before tearing anything down: it
-    // may be invoked concurrently on the dispatcher thread, and disable_sensor_hooks
-    // below replaces the live sensor's callback (synchronously stopping the dispatcher),
-    // but a late raise can race with the destructor entry.
-    m_alive->store(false, std::memory_order_release);
+    // Disarm every callback lambda that captured a sentinel referencing *this. Take the
+    // mutex first so any in-flight lambda body completes before we set alive=false; once
+    // we release, future invocations observe alive=false and return without touching *this.
+    {
+        std::lock_guard< std::mutex > lock( m_callback_lifetime->mutex );
+        m_callback_lifetime->alive.store( false, std::memory_order_release );
+    }
 
     m_sensor.unregister_before_start_callback(m_before_start_callback_token);
     disable_sensor_options_recording();
@@ -114,14 +116,16 @@ void librealsense::record_sensor::register_notifications_callback( rs2_notificat
 
     m_user_notification_callback = std::move(callback);
 
-    // Capture by value: the lambda is owned by m_sensor (which outlives *this), so it
-    // must not capture references into *this. The shared_ptr<atomic_bool> sentinel lets
-    // a late dispatch detect that the wrapper has been destroyed and bail out safely.
-    auto alive = m_alive;
+    // The lambda is owned by m_sensor (which outlives *this), so it must not capture
+    // references into *this. The lifetime sentinel lets a late dispatch detect that the
+    // wrapper has been destroyed (and the destructor's mutex acquisition guarantees no
+    // in-flight invocation of this body survives past ~record_sensor()).
+    auto lifetime = m_callback_lifetime;
     auto self = this;
-    auto from_live_sensor = rs2_notifications_callback_sptr(new notification_callback([alive, self](rs2_notification* n)
+    auto from_live_sensor = rs2_notifications_callback_sptr(new notification_callback([lifetime, self](rs2_notification* n)
     {
-        if (!alive->load(std::memory_order_acquire))
+        std::lock_guard< std::mutex > lock( lifetime->mutex );
+        if (!lifetime->alive.load(std::memory_order_acquire))
             return;
         if (self->m_is_recording)
         {
@@ -355,12 +359,20 @@ void record_sensor::enable_sensor_options_recording()
         try
         {
             auto& opt = m_sensor.get_option(id);
-            opt.enable_recording([this, id](const librealsense::option& option) {
+            // Same lifetime concern as the notifications lambda above: the option owns
+            // this callback and may invoke it concurrently with ~record_sensor(). Pass
+            // the lifetime sentinel by value and gate the body on it.
+            auto lifetime = m_callback_lifetime;
+            auto self = this;
+            opt.enable_recording([lifetime, self, id](const librealsense::option& option) {
+                std::lock_guard< std::mutex > lock( lifetime->mutex );
+                if (!lifetime->alive.load(std::memory_order_acquire))
+                    return;
                 options_container options;
                 std::shared_ptr<librealsense::option> option_snapshot;
                 option.create_snapshot(option_snapshot);
                 options.register_option(id, option_snapshot);
-                record_snapshot<options_interface>(RS2_EXTENSION_OPTIONS, options);
+                self->record_snapshot<options_interface>(RS2_EXTENSION_OPTIONS, options);
             });
             m_recording_options.insert(id);
         }
