@@ -266,8 +266,8 @@ def test_multi_stream_operation(test_devices):
         pytest.fail(f"At least 2 stream types needed for multi-stream test, but found {len(stream_configs)}")
 
     log.info(f"Found {len(stream_configs)} common stream types")
-    for stream_type, index, w, h, fmt, fps in stream_configs:
-        log.info(f"  Selected profile: {stream_type} (index {index}): {w}x{h} @ {fps}fps, format {fmt}")
+    for stream_type, stream_index, w, h, fmt, fps in stream_configs:
+        log.info(f"  Selected profile: {stream_type} (stream_index {stream_index}): {w}x{h} @ {fps}fps, format {fmt}")
     log.info(f"Will stream all of them simultaneously from all {len(device_list)} devices")
 
     success, drop_percentages, stats = stream_multi_and_check_frames(
