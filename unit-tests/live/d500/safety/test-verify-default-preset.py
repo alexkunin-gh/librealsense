@@ -2,7 +2,7 @@
 # Copyright(c) 2024 RealSense, Inc. All Rights Reserved.
 
 # Not frequently changing, no need to test for each commit
-# test:donotrun:!nightly
+# test:donotrun  # to be restored to run on nightly after FW issue is solved (:!nightly)
 # test:device D585S
 
 import pyrealsense2 as rs
