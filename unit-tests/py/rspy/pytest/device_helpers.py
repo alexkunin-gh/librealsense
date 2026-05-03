@@ -105,6 +105,7 @@ def find_matching_devices(device_markers, each=True, cli_includes=None, cli_excl
 
 
 _MISSING_SENTINEL_PREFIX = "__MISSING__:"
+_SKIP_SENTINEL_PREFIX = "__SKIP__:"
 
 
 def _build_type_sets(markers):
@@ -181,20 +182,30 @@ def resolve_device_each_serials(metafunc):
 
     # When device() markers coexist with device_each(), resolve them here so they also
     # receive a parametrized instance.  Each device() marker contributes exactly one
-    # serial (the first matching device), or a failure sentinel if none is found.
+    # serial (the first matching device), or a sentinel if none is found.
+    #
+    # Two sentinel cases mirror the non-parametrized path in module_device_setup:
+    #   had_raw_match=True  → device exists but all filtered (exclude/type) → skip
+    #   had_raw_match=False → no device of this type in the lab at all      → fail
     for marker in single_device_markers:
         pattern = marker.args[0]
         found_sn = None
+        had_raw_match = False
         for sn in devices.by_spec(pattern, []):
+            had_raw_match = True
             if passes(sn):
                 found_sn = sn
                 break
         if found_sn is not None:
             if found_sn not in all_serials:
                 all_serials.append(found_sn)
+        elif had_raw_match:
+            # Device(s) matched the pattern but were all excluded — skip gracefully.
+            sentinel = f"{_SKIP_SENTINEL_PREFIX}{pattern}"
+            if sentinel not in all_serials:
+                all_serials.append(sentinel)
         else:
-            # Mandatory device not found — add a sentinel so the test instance is still
-            # created and module_device_setup can emit pytest.fail() with a clear message.
+            # No candidates at all — device genuinely absent from the lab.
             sentinel = f"{_MISSING_SENTINEL_PREFIX}{pattern}"
             if sentinel not in all_serials:
                 all_serials.append(sentinel)
@@ -203,6 +214,8 @@ def resolve_device_each_serials(metafunc):
         def _serial_id(sn):
             if sn.startswith(_MISSING_SENTINEL_PREFIX):
                 return f"MISSING-{sn[len(_MISSING_SENTINEL_PREFIX):]}"
+            if sn.startswith(_SKIP_SENTINEL_PREFIX):
+                return f"SKIP-{sn[len(_SKIP_SENTINEL_PREFIX):]}"
             dev = devices.get(sn)
             return f"{dev.name}-{sn}" if dev else sn
 

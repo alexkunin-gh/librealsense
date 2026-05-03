@@ -46,7 +46,7 @@ from rspy.pytest.logging_setup import (
 )
 from rspy.pytest.log_live_format import install as install_live_log_format
 from rspy.pytest.cli import consume_legacy_flags, apply_pending_flags
-from rspy.pytest.device_helpers import find_matching_devices, find_matching_devices_multi, resolve_device_each_serials, _MISSING_SENTINEL_PREFIX
+from rspy.pytest.device_helpers import find_matching_devices, find_matching_devices_multi, resolve_device_each_serials, _MISSING_SENTINEL_PREFIX, _SKIP_SENTINEL_PREFIX
 from rspy.pytest.collection import filter_and_sort_items
 from rspy.pytest.plugins import check_required_plugins
 
@@ -406,8 +406,13 @@ def module_device_setup(request):
     # Check parametrized serial from device_each / device (injected by pytest_generate_tests)
     if hasattr(request.node, 'callspec') and '_test_device_serial' in request.node.callspec.params:
         serial_number = request.node.callspec.params['_test_device_serial']
-        # A sentinel means a mandatory device() marker found no matching device at collection time
+        if serial_number.startswith(_SKIP_SENTINEL_PREFIX):
+            # Device matched the pattern but was excluded (wrong type, device_exclude, etc.)
+            # Mirror the non-parametrized path: had_candidates=True → skip, not fail.
+            pattern = serial_number[len(_SKIP_SENTINEL_PREFIX):]
+            pytest.skip(f"No suitable devices for requirements: {pattern}")
         if serial_number.startswith(_MISSING_SENTINEL_PREFIX):
+            # No devices of this type found in the lab at all.
             pattern = serial_number[len(_MISSING_SENTINEL_PREFIX):]
             pytest.fail(f"No devices found matching requirements: {pattern}")
         log.debug(f"Test using parametrized device: {serial_number}")
