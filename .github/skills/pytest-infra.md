@@ -74,6 +74,7 @@ When migrating a legacy `test-*.py` to `pytest-*.py`:
 3. **Handle `#test:` directives**: For each one found in the legacy test:
    - `#test:device` / `#test:device each(...)` → `@pytest.mark.device(...)` / `@pytest.mark.device_each(...)`
    - `#test:donotrun:!nightly` → `@pytest.mark.context("nightly")`
+   - `#test:retries N` → `@pytest.mark.flaky(retries=N)` (**not** `pytest.mark.retries(N)` — that marker does not exist in pytest-retry and silently becomes a no-op with a PytestUnknownMarkWarning)
    - `#test:timeout` → check if pytest has a native equivalent
    - `#test:platform` → `@pytest.mark.skipif(platform...)`
    - `#test:flag` → check for `pytest.mark` equivalent
@@ -95,7 +96,24 @@ When migrating a legacy `test-*.py` to `pytest-*.py`:
 
 11. **Common code snippets**: Common short code snippets can be replaced with convenience helper functions, e.g `rspy.snippets.is_dds_dev`.
 
-12. **Don't wrap test bodies in `try`/`finally` to swallow failures**: Pytest natively reports any unhandled exception as a test failure — there is no need for the legacy `try: ... except: test.unexpected_exception()` pattern. When migrating, just **delete** the `try`/`except` wrapper and let pytest handle it.
+12. **FW version gating — use `require_min_fw_version`**: When a test requires a minimum firmware version, do **not** write inline `fw_version = ... / if fw_version < ...: pytest.skip(...)` blocks in each function. Use the shared helper from `rspy.pytest.device_helpers` instead:
+
+    ```python
+    from rspy.pytest.device_helpers import require_min_fw_version
+    import pyrsutils as rsutils
+
+    def test_something(test_device):
+        dev, _ = test_device
+        # skip if fw < 5.15.0.0 (require fw >= 5.15.0.0):
+        require_min_fw_version(dev, rsutils.version(5, 15, 0, 0), "FEATURE_NAME")
+
+        # skip if fw <= 5.14.0.0 (require fw > 5.14.0.0, i.e. strictly greater):
+        require_min_fw_version(dev, rsutils.version(5, 14, 0, 0), "FEATURE_NAME", inclusive=False)
+    ```
+
+    The helper caches the result per `(device serial, min_version, inclusive)` — the check runs at most once per device/version combination. On pass the result is cached and subsequent calls are no-ops. On fail `pytest.skip()` is raised (cache never written), so every test that calls it will also skip. It also handles devices that don't expose firmware version info.
+
+13. **Don't wrap test bodies in `try`/`finally` to swallow failures**: Pytest natively reports any unhandled exception as a test failure — there is no need for the legacy `try: ... except: test.unexpected_exception()` pattern. When migrating, just **delete** the `try`/`except` wrapper and let pytest handle it.
 
     - **Cleanup belongs in a fixture**, not in `try/finally` inside the test body. Use `@pytest.fixture` with `yield`: code before `yield` is setup, code after `yield` runs even when the test fails (see the `_sw_session` autouse fixture in `unit-tests/syncer/pytest-ts-*.py` for the pattern).
     - **If you genuinely must wrap with `try`** (e.g. to attach context to the failure message), **always re-raise or fail explicitly** — never swallow:
@@ -107,6 +125,48 @@ When migrating a legacy `test-*.py` to `pytest-*.py`:
       ```
       A bare `except: pass` or a `finally:` that does cleanup but doesn't re-raise the original exception turns a real failure into a silent pass.
     - **Expected exceptions** (legacy `try/except RuntimeError: test.check_exception(...)`) → migrate to `with pytest.raises(RuntimeError, match="..."):` (see `unit-tests/syncer/pytest-ts-same-fps.py:63` for the pattern).
+
+## Handling `on_fail=test.ABORT`
+
+The legacy framework supported `with test.closure('Name', on_fail=test.ABORT):` — if that closure failed, all subsequent closures were skipped. In pytest, use the **`pytest-dependency`** plugin (already in `requirements.txt` and `plugins.py`).
+
+**Pattern**: mark the prerequisite test with `@pytest.mark.dependency(scope='module')`, and each dependent test with `@pytest.mark.dependency(scope='module', depends=["prerequisite_name"])`. If the prerequisite fails or is skipped, all dependents are automatically skipped.
+
+```python
+# Prerequisite test — asserts (hard fail if condition not met), registers as a dependency
+@pytest.mark.dependency(scope='module')
+def test_advanced_mode_support(test_device_wrapped):
+    """Prerequisite: camera must be in advanced mode."""
+    dev, ctx = test_device_wrapped
+    assert rs.rs400_advanced_mode(dev).is_enabled()
+
+# Dependent test — skipped automatically if test_advanced_mode_support failed/was skipped
+@pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support"])
+def test_set_depth_control(test_device_wrapped):
+    dev, ctx = test_device_wrapped
+    ...
+```
+
+**`scope='module'`**: limits dependency resolution to the current test file, so identically-named tests in other files do not interfere.
+
+**Parametrized tests**: when both the prerequisite and dependent tests share the same parametrization (e.g., `device_each`), `pytest-dependency` automatically matches per-parameter — `test_set_depth_control[D455-SN]` is only skipped if `test_advanced_mode_support[D455-SN]` specifically failed, not if a different device's run failed.
+
+**Chain of ABORTs**: if a file has multiple `on_fail=test.ABORT` closures in sequence, list all prerequisite names in `depends=`:
+
+```python
+@pytest.mark.dependency(scope='module')
+def test_advanced_mode_support(...):   # first ABORT
+    assert ...
+
+@pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support"])
+def test_visual_preset_support(...):   # second ABORT
+    assert ...
+
+# Everything after the second ABORT depends on both
+@pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
+def test_set_depth_control(...):
+    ...
+```
 
 ## Assertions: `assert` vs `pytest-check`
 
@@ -148,6 +208,7 @@ test_devices                 → returns ([rs.device, ...], rs.context)
 | You need | Use this fixture | Example |
 |---|---|---|
 | A device + context | `test_device` | Most hardware tests: streaming, options, metadata |
+| A device + context, D585S in service mode | `test_device_wrapped` | D585S option/preset tests — service mode entered once per module, restored at module teardown |
 | Multiple devices + context | `test_devices` | Multi-device tests (use with `device("D400*", "D400*")`) |
 | Just a context (custom queries) | `test_context` | Device enumeration, custom context settings |
 | Only hub setup, you create your own context | `module_device_setup` | Tests that need custom context settings (e.g., DDS config) |
