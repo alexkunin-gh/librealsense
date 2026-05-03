@@ -167,7 +167,9 @@ namespace librealsense
 
         static std::string notification_topic(const device_serializer::sensor_identifier& sensor_id, rs2_notification_category nc)
         {
-            return create_from({ device_prefix(sensor_id.device_index), sensor_prefix(sensor_id.sensor_index), "notification", rs2_notification_category_to_string(nc)});
+            std::string topic_name = rs2_notification_category_to_string(nc);
+            std::replace(topic_name.begin(), topic_name.end(), ' ', '_');
+            return create_from({ device_prefix(sensor_id.device_index), sensor_prefix(sensor_id.sensor_index), "notification", topic_name });
         }
 
         template<uint32_t index>
