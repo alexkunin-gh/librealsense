@@ -46,9 +46,10 @@ SN_TO_NAME = {sn: name for name, (sn, _) in DEVICES.items()}
 
 class FakeDevice:
     """Minimal stand-in for rspy.devices.Device."""
-    def __init__(self, sn, name):
+    def __init__(self, sn, name, connection_type="USB"):
         self.sn = sn
         self.name = name
+        self.connection_type = connection_type
 
 
 def fake_by_spec(pattern, ignored):

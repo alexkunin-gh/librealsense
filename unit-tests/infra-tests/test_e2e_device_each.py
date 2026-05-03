@@ -28,3 +28,18 @@ class TestDeviceEachParametrization:
     def test_ids_contain_device_name(self):
         rc, out, *_ = run_e2e("pytest-each.py", "-k", "test_ids")
         assert "D455-111" in out
+
+    def test_device_and_each_both_run(self):
+        """device("D455") + device_each("D515") should run two instances, both passing."""
+        rc, out, *_ = run_e2e("pytest-each.py", "-k", "test_device_and_each")
+        assert_outcomes(out, passed=2)
+
+    def test_device_missing_sentinel_fails(self):
+        """device("D999") not found → one instance errors (fixture fail); device_each("D455") → one passes."""
+        rc, out, *_ = run_e2e("pytest-each.py", "-k", "test_device_missing_and_each")
+        assert_outcomes(out, passed=1, error=1)
+
+    def test_missing_sentinel_id(self):
+        """The missing-device instance should have a human-readable MISSING-... test ID."""
+        rc, out, *_ = run_e2e("pytest-each.py", "-k", "test_device_missing_and_each")
+        assert "MISSING-D999" in out

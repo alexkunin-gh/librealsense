@@ -46,7 +46,7 @@ from rspy.pytest.logging_setup import (
 )
 from rspy.pytest.log_live_format import install as install_live_log_format
 from rspy.pytest.cli import consume_legacy_flags, apply_pending_flags
-from rspy.pytest.device_helpers import find_matching_devices, find_matching_devices_multi, resolve_device_each_serials
+from rspy.pytest.device_helpers import find_matching_devices, find_matching_devices_multi, resolve_device_each_serials, _MISSING_SENTINEL_PREFIX
 from rspy.pytest.collection import filter_and_sort_items
 from rspy.pytest.plugins import check_required_plugins
 
@@ -250,6 +250,12 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "priority(value): test execution priority (lower runs first, default 500)"
     )
+    config.addinivalue_line(
+        "markers", "device_type(type): run test only on devices with a matching connection type (e.g., GMSL, USB, DDS)"
+    )
+    config.addinivalue_line(
+        "markers", "device_type_exclude(type): skip test if device connection type matches (e.g., GMSL, USB, DDS)"
+    )
 
     # Configure standard logging with format matching legacy rspy.log output
     configure_logging(config, _debug_requested)
@@ -397,9 +403,13 @@ def module_device_setup(request):
     """Enable the target device via the hub. Recycles (power-cycles) once per test file, not per test case."""
     serial_number = None
 
-    # Check parametrized serial from device_each
+    # Check parametrized serial from device_each / device (injected by pytest_generate_tests)
     if hasattr(request.node, 'callspec') and '_test_device_serial' in request.node.callspec.params:
         serial_number = request.node.callspec.params['_test_device_serial']
+        # A sentinel means a mandatory device() marker found no matching device at collection time
+        if serial_number.startswith(_MISSING_SENTINEL_PREFIX):
+            pattern = serial_number[len(_MISSING_SENTINEL_PREFIX):]
+            pytest.fail(f"No devices found matching requirements: {pattern}")
         log.debug(f"Test using parametrized device: {serial_number}")
     else:
         # Fall back to marker-based detection (for device() marker)

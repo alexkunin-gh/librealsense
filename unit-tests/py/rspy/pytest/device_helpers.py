@@ -50,6 +50,18 @@ def find_matching_devices(device_markers, each=True, cli_includes=None, cli_excl
     for pattern in exclude_patterns:
         excluded_sns.update(devices.by_spec(pattern, []))
 
+    # Resolve connection type filters (include and exclude)
+    required_types = set()
+    for marker in device_markers:
+        if marker.name == 'device_type' and marker.args:
+            required_types.add(marker.args[0].upper())
+            log.debug(f"Requiring devices with connection type: {marker.args[0]}")
+    excluded_types = set()
+    for marker in device_markers:
+        if marker.name == 'device_type_exclude' and marker.args:
+            excluded_types.add(marker.args[0].upper())
+            log.debug(f"Excluding devices with connection type: {marker.args[0]}")
+
     # Resolve CLI includes to a set of allowed serial numbers (None = no filter)
     included_sns = None
     if cli_includes:
@@ -72,6 +84,15 @@ def find_matching_devices(device_markers, each=True, cli_includes=None, cli_excl
                 continue
             if included_sns is not None and sn not in included_sns:
                 continue
+            if required_types or excluded_types:
+                device = devices.get(sn)
+                conn_type = (device.connection_type or "").upper() if device else ""
+                if required_types and conn_type not in required_types:
+                    log.debug(f"  Device {device.name} ({sn}) skipped: connection type {conn_type} not in {required_types}")
+                    continue
+                if conn_type in excluded_types:
+                    log.debug(f"  Device {device.name} ({sn}) excluded by connection type {conn_type}")
+                    continue
 
             if sn not in matching_sns:
                 matching_sns.append(sn)
@@ -83,14 +104,34 @@ def find_matching_devices(device_markers, each=True, cli_includes=None, cli_excl
     return matching_sns, had_candidates
 
 
+_MISSING_SENTINEL_PREFIX = "__MISSING__:"
+
+
 def resolve_device_each_serials(metafunc):
-    """Expand @device_each markers into parametrized test instances, one per matching device.
+    """Expand @device_each and @device markers into parametrized test instances.
 
     Called from the pytest_generate_tests hook. Resolves exclude/include patterns from
     both markers and CLI options, then calls metafunc.parametrize() with matching serials.
+
+    - ``device_each(pattern)``: one instance per matching device (optional — no instance
+      if no device matches).
+    - ``device(pattern)`` (single-spec form): exactly one instance using the first matching
+      device.  If no device matches, a ``__MISSING__:pattern`` sentinel is added so that
+      the test still runs and ``module_device_setup`` can call pytest.fail() for it.
+
+    When only ``device`` markers are present (no ``device_each``), this hook returns early
+    and lets the existing non-parametrized path in ``module_device_setup`` handle them.
     """
     device_each_markers = [m for m in metafunc.definition.iter_markers("device_each")]
+    # Single-spec device() markers only — multi-spec (e.g. device("A", "B")) are handled
+    # entirely inside module_device_setup via find_matching_devices_multi.
+    single_device_markers = [
+        m for m in metafunc.definition.iter_markers("device")
+        if m.args and len(m.args) == 1
+    ]
 
+    # Nothing to do if there are no device_each markers.
+    # (Pure device() markers are handled by the non-parametrized path in module_device_setup.)
     if not device_each_markers:
         return
 
@@ -105,6 +146,12 @@ def resolve_device_each_serials(metafunc):
     for pattern in exclude_patterns:
         excluded_sns.update(devices.by_spec(pattern, []))
 
+    # Resolve connection type filters (include and exclude)
+    type_markers = [m for m in metafunc.definition.iter_markers("device_type")]
+    required_types = {m.args[0].upper() for m in type_markers if m.args}
+    type_exclude_markers = [m for m in metafunc.definition.iter_markers("device_type_exclude")]
+    excluded_types = {m.args[0].upper() for m in type_exclude_markers if m.args}
+
     # Resolve CLI --device includes to a set of allowed serial numbers (None = no filter)
     cli_includes = split_cli_patterns(metafunc.config.getoption("--device", default=[]))
     included_sns = None
@@ -113,20 +160,57 @@ def resolve_device_each_serials(metafunc):
         for inc in cli_includes:
             included_sns.update(devices.by_spec(inc, []))
 
+    def _passes_filters(sn):
+        """Return True if sn clears all exclusion/include/type filters."""
+        if sn in excluded_sns:
+            return False
+        if included_sns is not None and sn not in included_sns:
+            return False
+        if required_types or excluded_types:
+            dev = devices.get(sn)
+            conn_type = (dev.connection_type or "").upper() if dev else ""
+            if required_types and conn_type not in required_types:
+                return False
+            if conn_type in excluded_types:
+                return False
+        return True
+
     for marker in device_each_markers:
         if not marker.args:
             continue
         pattern = marker.args[0]
         for sn in devices.by_spec(pattern, []):
-            if sn in excluded_sns:
-                continue
-            if included_sns is not None and sn not in included_sns:
-                continue
-            if sn not in all_serials:
+            if _passes_filters(sn) and sn not in all_serials:
                 all_serials.append(sn)
 
+    # When device() markers coexist with device_each(), resolve them here so they also
+    # receive a parametrized instance.  Each device() marker contributes exactly one
+    # serial (the first matching device), or a failure sentinel if none is found.
+    for marker in single_device_markers:
+        pattern = marker.args[0]
+        found_sn = None
+        for sn in devices.by_spec(pattern, []):
+            if _passes_filters(sn):
+                found_sn = sn
+                break
+        if found_sn is not None:
+            if found_sn not in all_serials:
+                all_serials.append(found_sn)
+        else:
+            # Mandatory device not found — add a sentinel so the test instance is still
+            # created and module_device_setup can emit pytest.fail() with a clear message.
+            sentinel = f"{_MISSING_SENTINEL_PREFIX}{pattern}"
+            if sentinel not in all_serials:
+                all_serials.append(sentinel)
+
     if all_serials:
-        ids = [f"{devices.get(sn).name}-{sn}" for sn in all_serials]
+        def _serial_id(sn):
+            if sn.startswith(_MISSING_SENTINEL_PREFIX):
+                return f"MISSING-{sn[len(_MISSING_SENTINEL_PREFIX):]}"
+            dev = devices.get(sn)
+            return f"{dev.name}-{sn}" if dev else sn
+
+        ids = [_serial_id(sn) for sn in all_serials]
         metafunc.fixturenames.append('_test_device_serial')
         metafunc.parametrize("_test_device_serial", all_serials, ids=ids, scope="function")
 
