@@ -1,14 +1,16 @@
 # License: Apache 2.0. See LICENSE file in root directory.
-# Copyright(c) 2023 RealSense, Inc. All Rights Reserved.
+# Copyright(c) 2026 RealSense, Inc. All Rights Reserved.
 
 import sys
 import time
 import copy
+import logging
 import pyrealsense2 as rs
-from rspy import test, log
 import struct
 import zlib
 import ctypes
+
+log = logging.getLogger(__name__)
 
 # Constants for calibration
 CALIBRATION_TIMEOUT_SECONDS = 30
@@ -25,7 +27,7 @@ _global_original_calib_table = None
 def on_calib_cb(progress):
     """Callback function for calibration progress reporting."""
     pp = int(progress)
-    log.d( f"Calibration at {progress}%" )
+    log.debug( f"Calibration at {progress}%" )
 
 def get_calibration_device(image_width, image_height, fps):
     """
@@ -86,11 +88,11 @@ def calibration_main(config, pipeline, calib_dev, occ_calib, json_config, ground
     # Execute calibration based on type
     try:
         if occ_calib:    
-            log.i("Starting on-chip calibration")
+            log.info("Starting on-chip calibration")
             timeout = OCC_TIMEOUT_MS_HA if host_assistance else OCC_TIMEOUT_MS
             new_calib, health = calib_dev.run_on_chip_calibration(json_config, on_calib_cb, timeout)
         else:    
-            log.i("Starting tare calibration")
+            log.info("Starting tare calibration")
             timeout = TARE_TIMEOUT_MS_HA if host_assistance else TARE_TIMEOUT_MS            
             new_calib, health = calib_dev.run_tare_calibration(ground_truth, json_config, on_calib_cb, timeout)
 
@@ -108,11 +110,11 @@ def calibration_main(config, pipeline, calib_dev, occ_calib, json_config, ground
         if calib_done:
             new_calib_result = bytes(new_calib)
             
-        log.i("Calibration completed successfully")
-        log.i("Health factor = ", health[0])
+        log.info("Calibration completed successfully")
+        log.info(f"Health factor = {health[0]}")
         
     except Exception as e:
-        log.e("Calibration failed: ", str(e))
+        log.error(f"Calibration failed: {e}")
         raise
     finally:
         # Stop pipeline
@@ -211,7 +213,7 @@ def measure_average_depth(config, pipe, width=640, height=480, fps=30, frames=10
             return None
         return valid_sum_m / valid_count
     except Exception as e:
-        log.w(f"measure_average_depth failed: {e}")
+        log.warning(f"measure_average_depth failed: {e}")
         try:
             if pipe:
                 pipe.stop()
@@ -245,7 +247,7 @@ def get_current_rect_params(auto_calib_device):
     if calib_table is not None:
         calib_table = bytes(calib_table)
     if len(calib_table) < 280:
-        log.e("Calibration table is too small")
+        log.error("Calibration table is too small")
         return None
     try:
         #  calibration table is 4 3x3 float matrices (each 9 * 4 bytes) — intrinsics/extrinsics left/right pairs
@@ -266,7 +268,7 @@ def get_current_rect_params(auto_calib_device):
         }
         return (left_ppx, left_ppy), (right_ppx, right_ppy), offsets_dict
     except Exception as e:
-        log.e(f"Error reading principal points: {e}")
+        log.error(f"Error reading principal points: {e}")
         return None
         
 def save_calibration_table(device):
@@ -286,19 +288,19 @@ def save_calibration_table(device):
             auto_calib_device = rs.auto_calibrated_device(device)
             
         if not auto_calib_device:
-            log.e("Device does not support auto calibration")
+            log.error("Device does not support auto calibration")
             return None
             
         calib_table = auto_calib_device.get_calibration_table()
         if calib_table is not None:
             saved_table = bytes(calib_table)
-            log.d(f"Saved calibration table ({len(saved_table)} bytes)")
+            log.debug(f"Saved calibration table ({len(saved_table)} bytes)")
             return saved_table
         else:
-            log.e("Failed to retrieve calibration table")
+            log.error("Failed to retrieve calibration table")
             return None
     except Exception as e:
-        log.e(f"Error saving calibration table: {e}")
+        log.error(f"Error saving calibration table: {e}")
         return None
 
 
@@ -321,18 +323,18 @@ def restore_calibration_table(device, saved_table=None):
         else:
             auto_calib_device = rs.auto_calibrated_device(device)
         if not auto_calib_device:
-            log.e("Device does not support auto calibration")
+            log.error("Device does not support auto calibration")
             return False
 
         # Option 1: Factory reset
         if saved_table is None:
-            log.i("Restoring factory calibration")
+            log.info("Restoring factory calibration")
             auto_calib_device.reset_to_factory_calibration()
             time.sleep(1)
             return True
 
         # Option 2: Restore from saved table
-        log.i(f"Restoring saved calibration table ({len(saved_table)} bytes)")
+        log.info(f"Restoring saved calibration table ({len(saved_table)} bytes)")
         calib_list = list(saved_table)
         auto_calib_device.set_calibration_table(calib_list)
         auto_calib_device.write_calibration()
@@ -340,13 +342,13 @@ def restore_calibration_table(device, saved_table=None):
         # Verify restoration
         current_table = auto_calib_device.get_calibration_table()
         if current_table and bytes(current_table) == saved_table:
-            log.d("Calibration table restored and verified successfully")
+            log.debug("Calibration table restored and verified successfully")
             return True
         else:
-            log.w("Calibration table restored but verification failed")
+            log.warning("Calibration table restored but verification failed")
             return True  # Still return True as write succeeded
     except Exception as e:
-        log.e(f"Error restoring calibration table: {e}")
+        log.error(f"Error restoring calibration table: {e}")
         return False
 
 def get_calibration_table(device):
@@ -359,7 +361,7 @@ def get_calibration_table(device):
             calib_table = bytes(calib_table)
         return calib_table
     except Exception as e:
-        log.e(f"-E- Failed to get calibration table: {e}")
+        log.error(f"-E- Failed to get calibration table: {e}")
         return None
     
 def write_calibration_table_with_crc(device, modified_data):
@@ -386,7 +388,7 @@ def write_calibration_table_with_crc(device, modified_data):
         return True, bytes(final_data)
         
     except Exception as e:
-        log.e(f"-E- Error writing calibration table: {e}")
+        log.error(f"-E- Error writing calibration table: {e}")
         return False, str(e)
 
 def modify_intrinsic_calibration(device, pixel_correction, modify_ppy=True):
@@ -414,11 +416,11 @@ def modify_intrinsic_calibration(device, pixel_correction, modify_ppy=True):
         if modify_ppy:
             corrected_raw_ppy = original_raw_ppy + pixel_correction
             right_intrinsics[3] = corrected_raw_ppy / height
-            log.i(f"  Raw Right ppy original={original_raw_ppy:.6f} modified={corrected_raw_ppy:.6f}")
+            log.info(f"  Raw Right ppy original={original_raw_ppy:.6f} modified={corrected_raw_ppy:.6f}")
         else:
             corrected_raw_ppx = original_raw_ppx + pixel_correction
             right_intrinsics[2] = corrected_raw_ppx / width
-            log.i(f"  Raw Right ppx original={original_raw_ppx:.6f} modified={corrected_raw_ppx:.6f}")
+            log.info(f"  Raw Right ppx original={original_raw_ppx:.6f} modified={corrected_raw_ppx:.6f}")
         modified_data[right_intrinsics_offset:right_intrinsics_offset+36] = struct.pack('<9f', *right_intrinsics)
         write_ok, modified_table_or_err = write_calibration_table_with_crc(device, bytes(modified_data))
         if not write_ok:
@@ -427,7 +429,7 @@ def modify_intrinsic_calibration(device, pixel_correction, modify_ppy=True):
         new_ppy = right_intrinsics[3] * height
         return True, modified_table_or_err, new_ppx, new_ppy
     except Exception as e:
-        log.e(f"Error modifying calibration: {e}")
+        log.error(f"Error modifying calibration: {e}")
         return False, str(e), None, None
 
 # ---------------------------------------------------------------------------
@@ -450,9 +452,9 @@ def on_chip_calibration_json(occ_json_file, host_assistance):
             occ_json = open(occ_json_file).read()
         except Exception:
             occ_json = None
-            log.e('Error reading occ_json_file: ', occ_json_file)
+            log.error(f'Error reading occ_json_file: {occ_json_file}')
     if occ_json is None:
-        log.i('Using default parameters for on-chip calibration.')
+        log.info('Using default parameters for on-chip calibration.')
         occ_json = '{\n  ' + \
                    '"calib type": 0,\n' + \
                    '"host assistance": ' + str(int(host_assistance)) + ',\n' + \

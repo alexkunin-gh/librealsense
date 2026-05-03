@@ -1,14 +1,19 @@
 # License: Apache 2.0. See LICENSE file in root directory.
-# Copyright(c) 2023 RealSense, Inc. All Rights Reserved.
-                                                          ##
-import sys
-import time
-import pyrealsense2 as rs
-from rspy import test, log
-from test_calibrations_common import calibration_main, get_calibration_device, is_mipi_device
+# Copyright(c) 2026 RealSense, Inc. All Rights Reserved.
 
-#disabled until we stabilize lab
-#test:donotrun
+import time
+import pytest
+import pyrealsense2 as rs
+import logging
+from calibrations_common import calibration_main, get_calibration_device, is_mipi_device
+
+log = logging.getLogger(__name__)
+
+# Disabled until we stabilize the lab (was #test:donotrun in the legacy directive form).
+pytestmark = [
+    pytest.mark.skip(reason="disabled until lab stabilization is complete"),
+]
+
 
 def tare_calibration_json(tare_json_file, host_assistance):
     tare_json = None
@@ -17,9 +22,9 @@ def tare_calibration_json(tare_json_file, host_assistance):
             tare_json = open(tare_json_file).read()
         except:
             tare_json = None
-            log.e('Error reading tare_json_file: ', tare_json_file)
+            log.error(f'Error reading tare_json_file: {tare_json_file}')
     if tare_json is None:
-        log.i('Using default parameters for Tare calibration.')
+        log.info('Using default parameters for Tare calibration.')
         tare_json = '{\n  '+\
                     '"host assistance": ' + str(int(host_assistance)) + ',\n'+\
                     '"speed": 3,\n'+\
@@ -73,10 +78,10 @@ def calculate_target_z():
                 raise RuntimeError(f"Failed to capture {number_of_images} frames in {timeout_s} seconds, got only {counter} frames")
 
         adev = dev.as_auto_calibrated_device()
-        log.i('Calculating distance to target...')
-        log.i(f'\tTarget Size:\t{target_size}')
+        log.info('Calculating distance to target...')
+        log.info(f'\tTarget Size:\t{target_size}')
         target_z = adev.calculate_target_z(q, q2, q3, target_size[0], target_size[1])
-        log.i(f'Calculated distance to target is {target_z}')
+        log.info(f'Calculated distance to target is {target_z}')
     finally:
         pipe.stop()
 
@@ -89,41 +94,46 @@ TARGET_Z_MIN = 600
 TARGET_Z_MAX = 1500
 _target_z = None
 """
-if is_mipi_device():
-    with test.closure("Tare calibration test with host assistance"):
-        try:
-            host_assistance = True
-            if (_target_z is None):
-                _target_z = calculate_target_z()
-                test.check(_target_z > TARGET_Z_MIN and _target_z < TARGET_Z_MAX)
-            
-            tare_json = tare_calibration_json(None, host_assistance)
-            image_width, image_height, fps = 1280, 720, 30
-            config, pipeline, calib_dev = get_calibration_device(image_width, image_height, fps)
-            health_factor, new_calib_bytes = calibration_main(config, pipeline, calib_dev, False, tare_json, _target_z, host_assistance, return_table=True)
+def test_tare_calibration_with_host_assistance(test_device):
+    if not is_mipi_device():
+        pytest.skip("Host-assistance Tare calibration is only run on MIPI/GMSL devices")
+    global _target_z
+    try:
+        host_assistance = True
+        if (_target_z is None):
+            _target_z = calculate_target_z()
+            assert _target_z > TARGET_Z_MIN and _target_z < TARGET_Z_MAX
 
-            test.check(abs(health_factor) < HEALTH_FACTOR_THRESHOLD)
-        except Exception as e:
-            log.e("Tare calibration test with host assistance failed: ", str(e))
-            test.fail()
+        tare_json = tare_calibration_json(None, host_assistance)
+        image_width, image_height, fps = 1280, 720, 30
+        config, pipeline, calib_dev = get_calibration_device(image_width, image_height, fps)
+        health_factor, new_calib_bytes = calibration_main(config, pipeline, calib_dev, False, tare_json, _target_z, host_assistance, return_table=True)
+
+        assert abs(health_factor) < HEALTH_FACTOR_THRESHOLD
+    except Exception as e:
+        log.error(f"Tare calibration test with host assistance failed: {e}")
+        pytest.fail(f"Tare calibration test with host assistance failed: {e}")
 """
-if not is_mipi_device():
-# mipi devices do not support OCC calibration without host assistance  
-    with test.closure("Tare calibration test"):
+
+
+def test_tare_calibration(test_device):
+    # mipi devices do not support OCC calibration without host assistance
+    if is_mipi_device():
+        pytest.skip("MIPI/GMSL devices require host assistance for tare calibration")
+    global _target_z
+    if True:  # preserves legacy `with test.closure(...)` indentation for git rename detection
         try:
             host_assistance = False
             if _target_z is None:
                 _target_z = calculate_target_z()
-                test.check(_target_z > TARGET_Z_MIN and _target_z < TARGET_Z_MAX)
+                assert _target_z > TARGET_Z_MIN and _target_z < TARGET_Z_MAX
 
             tare_json = tare_calibration_json(None, host_assistance)
             image_width, image_height, fps = 256, 144, 90
             config, pipeline, calib_dev = get_calibration_device(image_width, image_height, fps)
             health_factor, new_calib_bytes = calibration_main(config, pipeline, calib_dev, False, tare_json, _target_z, host_assistance, return_table=True)
-            
-            test.check(abs(health_factor) < HEALTH_FACTOR_THRESHOLD)
-        except Exception as e:
-            log.e("Tare calibration test failed: ", str(e))
-            test.fail()
 
-test.print_results_and_exit()
+            assert abs(health_factor) < HEALTH_FACTOR_THRESHOLD
+        except Exception as e:
+            log.error(f"Tare calibration test failed: {e}")
+            pytest.fail(f"Tare calibration test failed: {e}")
