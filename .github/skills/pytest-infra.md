@@ -74,6 +74,7 @@ When migrating a legacy `test-*.py` to `pytest-*.py`:
 3. **Handle `#test:` directives**: For each one found in the legacy test:
    - `#test:device` / `#test:device each(...)` → `@pytest.mark.device(...)` / `@pytest.mark.device_each(...)`
    - `#test:donotrun:!nightly` → `@pytest.mark.context("nightly")`
+   - `#test:retries N` → `@pytest.mark.flaky(retries=N)` (**not** `pytest.mark.retries(N)` — that marker does not exist in pytest-retry and silently becomes a no-op with a PytestUnknownMarkWarning)
    - `#test:timeout` → check if pytest has a native equivalent
    - `#test:platform` → `@pytest.mark.skipif(platform...)`
    - `#test:flag` → check for `pytest.mark` equivalent
@@ -125,6 +126,48 @@ When migrating a legacy `test-*.py` to `pytest-*.py`:
       A bare `except: pass` or a `finally:` that does cleanup but doesn't re-raise the original exception turns a real failure into a silent pass.
     - **Expected exceptions** (legacy `try/except RuntimeError: test.check_exception(...)`) → migrate to `with pytest.raises(RuntimeError, match="..."):` (see `unit-tests/syncer/pytest-ts-same-fps.py:63` for the pattern).
 
+## Handling `on_fail=test.ABORT`
+
+The legacy framework supported `with test.closure('Name', on_fail=test.ABORT):` — if that closure failed, all subsequent closures were skipped. In pytest, use the **`pytest-dependency`** plugin (already in `requirements.txt` and `plugins.py`).
+
+**Pattern**: mark the prerequisite test with `@pytest.mark.dependency(scope='module')`, and each dependent test with `@pytest.mark.dependency(scope='module', depends=["prerequisite_name"])`. If the prerequisite fails or is skipped, all dependents are automatically skipped.
+
+```python
+# Prerequisite test — asserts (hard fail if condition not met), registers as a dependency
+@pytest.mark.dependency(scope='module')
+def test_advanced_mode_support(test_device_wrapped):
+    """Prerequisite: camera must be in advanced mode."""
+    dev, ctx = test_device_wrapped
+    assert rs.rs400_advanced_mode(dev).is_enabled()
+
+# Dependent test — skipped automatically if test_advanced_mode_support failed/was skipped
+@pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support"])
+def test_set_depth_control(test_device_wrapped):
+    dev, ctx = test_device_wrapped
+    ...
+```
+
+**`scope='module'`**: limits dependency resolution to the current test file, so identically-named tests in other files do not interfere.
+
+**Parametrized tests**: when both the prerequisite and dependent tests share the same parametrization (e.g., `device_each`), `pytest-dependency` automatically matches per-parameter — `test_set_depth_control[D455-SN]` is only skipped if `test_advanced_mode_support[D455-SN]` specifically failed, not if a different device's run failed.
+
+**Chain of ABORTs**: if a file has multiple `on_fail=test.ABORT` closures in sequence, list all prerequisite names in `depends=`:
+
+```python
+@pytest.mark.dependency(scope='module')
+def test_advanced_mode_support(...):   # first ABORT
+    assert ...
+
+@pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support"])
+def test_visual_preset_support(...):   # second ABORT
+    assert ...
+
+# Everything after the second ABORT depends on both
+@pytest.mark.dependency(scope='module', depends=["test_advanced_mode_support", "test_visual_preset_support"])
+def test_set_depth_control(...):
+    ...
+```
+
 ## Assertions: `assert` vs `pytest-check`
 
 The `pytest-check` plugin is available for soft assertions (non-stopping checks). Use it when the legacy test uses `test.check()` in a loop where execution should continue on failure — this matches the legacy behavior where `test.check()` recorded failures but didn't abort.
@@ -165,6 +208,7 @@ test_devices                 → returns ([rs.device, ...], rs.context)
 | You need | Use this fixture | Example |
 |---|---|---|
 | A device + context | `test_device` | Most hardware tests: streaming, options, metadata |
+| A device + context, D585S in service mode | `test_device_wrapped` | D585S option/preset tests — service mode entered once per module, restored at module teardown |
 | Multiple devices + context | `test_devices` | Multi-device tests (use with `device("D400*", "D400*")`) |
 | Just a context (custom queries) | `test_context` | Device enumeration, custom context settings |
 | Only hub setup, you create your own context | `module_device_setup` | Tests that need custom context settings (e.g., DDS config) |
