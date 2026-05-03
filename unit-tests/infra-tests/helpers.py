@@ -17,15 +17,15 @@ import pytest
 # Fake device inventory
 # =============================================================================
 #
-#   name   serial  product_line
-#   D455   111     D400
-#   D435   222     D400
-#   D435i  333     D400
-#   D405   444     D400
-#   D401   777     D400
-#   D457   888     D400
-#   D515   555     D500
-#   D555   666     D500
+#   name   serial  product_line  connection_type
+#   D455   111     D400          USB
+#   D435   222     D400          USB
+#   D435i  333     D400          USB
+#   D405   444     D400          USB
+#   D401   777     D400          USB
+#   D457   888     D400          GMSL
+#   D515   555     D500          USB
+#   D555   666     D500          USB
 #
 # The E2E conftest uses a subset (D455, D435, D515, D401) — enough to
 # test wildcards, excludes, and multi-device parametrization without noise.
@@ -42,6 +42,11 @@ DEVICES = {
 }
 
 SN_TO_NAME = {sn: name for name, (sn, _) in DEVICES.items()}
+
+# Connection types that differ from the default USB
+DEVICE_CONNECTION_TYPES = {
+    '888': 'GMSL',  # D457
+}
 
 
 class FakeDevice:
@@ -68,7 +73,10 @@ def fake_by_spec(pattern, ignored):
 def fake_get(sn):
     """Mock devices.get against the DEVICES inventory."""
     name = SN_TO_NAME.get(sn)
-    return FakeDevice(sn, name) if name else None
+    if not name:
+        return None
+    conn_type = DEVICE_CONNECTION_TYPES.get(sn, "USB")
+    return FakeDevice(sn, name, connection_type=conn_type)
 
 
 # =============================================================================

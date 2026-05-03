@@ -415,7 +415,8 @@ def module_device_setup(request):
         # Fall back to marker-based detection (for device() marker)
         device_markers = []
         for marker in request.node.iter_markers():
-            if marker.name in ['device', 'device_each', 'device_exclude']:
+            if marker.name in ['device', 'device_each', 'device_exclude',
+                               'device_type', 'device_type_exclude']:
                 device_markers.append(marker)
 
         if not device_markers:

@@ -15,7 +15,7 @@ Verifies how device markers resolve to serial numbers:
 
 import pytest
 from rspy.pytest.device_helpers import find_matching_devices, find_matching_devices_multi
-from helpers import fake_by_spec, fake_get, make_device_marker
+from helpers import fake_by_spec, fake_get, make_device_marker, DEVICE_CONNECTION_TYPES
 
 
 class TestFindMatchingDevices:
@@ -81,6 +81,48 @@ class TestFindMatchingDevices:
                    make_device_marker('device_each', 'D400*')]
         sns, _ = find_matching_devices(markers, each=True)
         assert sns.count('111') == 1
+
+
+class TestConnectionTypeFiltering:
+    """device_type / device_type_exclude marker filtering."""
+
+    @pytest.fixture(autouse=True)
+    def _patch_devices(self):
+        import rspy.devices as dev
+        orig_by_spec, orig_get = dev.by_spec, dev.get
+        dev.by_spec, dev.get = fake_by_spec, fake_get
+        yield
+        dev.by_spec, dev.get = orig_by_spec, orig_get
+
+    def test_device_type_exclude_gmsl(self):
+        """device_type_exclude("GMSL") should remove D457 (serial 888) from D400* results."""
+        markers = [make_device_marker('device_each', 'D400*'),
+                   make_device_marker('device_type_exclude', 'GMSL')]
+        sns, _ = find_matching_devices(markers, each=True)
+        assert '888' not in sns   # D457 is GMSL
+        assert '111' in sns       # D455 is USB, kept
+
+    def test_device_type_include_gmsl(self):
+        """device_type("GMSL") should return only D457 from D400* results."""
+        markers = [make_device_marker('device_each', 'D400*'),
+                   make_device_marker('device_type', 'GMSL')]
+        sns, _ = find_matching_devices(markers, each=True)
+        assert sns == ['888']     # only D457
+
+    def test_device_type_include_usb(self):
+        """device_type("USB") should exclude D457 (GMSL) from D400* results."""
+        markers = [make_device_marker('device_each', 'D400*'),
+                   make_device_marker('device_type', 'USB')]
+        sns, _ = find_matching_devices(markers, each=True)
+        assert '888' not in sns
+        assert '111' in sns
+
+    def test_device_type_unknown_excluded_by_required(self):
+        """device_type("DDS") with no DDS devices should return empty."""
+        markers = [make_device_marker('device_each', 'D400*'),
+                   make_device_marker('device_type', 'DDS')]
+        sns, _ = find_matching_devices(markers, each=True)
+        assert sns == []
 
 
 class TestFindMatchingDevicesMulti:
