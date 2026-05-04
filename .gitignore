@@ -7,6 +7,8 @@ ubuntu-focal-master/
 
 .gitconfig
 
+BrainStemLog.txt
+
 
 # Docs
 doc/doxygen/html/
