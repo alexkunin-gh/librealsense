@@ -861,39 +861,53 @@ namespace rs2
 
         // NVIDIA Jetson: hint the user when the viewer cannot benefit from CUDA acceleration.
         // /etc/nv_tegra_release is the canonical L4T marker for Jetson platforms.
+        // Compile-time (RS2_USE_CUDA) and runtime (rs2_is_gpu_available) are kept separate:
+        // a CUDA-enabled build whose runtime fails to initialize (e.g. broken/mismatched CUDA
+        // stack) must not be told to "rebuild with CUDA" — the real problem is at runtime.
         if (std::ifstream("/etc/nv_tegra_release").good())
         {
-            bool viewer_uses_cuda = false;
 #ifdef RS2_USE_CUDA
-            viewer_uses_cuda = rsutils::rs2_is_gpu_available();
-#endif
-            if (!viewer_uses_cuda)
+            // Built with CUDA. If the runtime cannot enumerate a GPU, surface a runtime-stack hint.
+            if (!rsutils::rs2_is_gpu_available())
             {
-                if (!directory_exists("/usr/local/cuda"))
-                {
-                    std::string message = "Running on NVIDIA Jetson without the CUDA runtime installed.\n"
-                        "For better performance, install the CUDA runtime\n"
-                        "(e.g. via the NVIDIA JetPack SDK, or 'sudo apt-get install cuda-runtime-*').";
-                    auto n = not_model->add_notification({ message,
-                         RS2_LOG_SEVERITY_WARN,
-                         RS2_NOTIFICATION_CATEGORY_COUNT });
-                    n->enable_complex_dismiss = true;
-                    n->delay_id = "jetson-cuda-runtime-missing";
-                    if (n->is_delayed()) n->dismiss(true);
-                }
-                else
-                {
-                    std::string message = "Running on NVIDIA Jetson with the CUDA runtime installed,\n"
-                        "but realsense-viewer is not using CUDA.\n"
-                        "For better performance, rebuild librealsense with -DBUILD_WITH_CUDA=ON.";
-                    auto n = not_model->add_notification({ message,
-                         RS2_LOG_SEVERITY_WARN,
-                         RS2_NOTIFICATION_CATEGORY_COUNT });
-                    n->enable_complex_dismiss = true;
-                    n->delay_id = "jetson-cuda-not-used";
-                    if (n->is_delayed()) n->dismiss(true);
-                }
+                std::string message = "Running on NVIDIA Jetson and realsense-viewer was built with CUDA,\n"
+                    "but the CUDA runtime failed to initialize (no GPU device reported).\n"
+                    "Check the CUDA driver/library stack on this device; see the SDK log for the cudaGetDeviceCount error.";
+                auto n = not_model->add_notification({ message,
+                     RS2_LOG_SEVERITY_WARN,
+                     RS2_NOTIFICATION_CATEGORY_COUNT });
+                n->enable_complex_dismiss = true;
+                n->delay_id = "jetson-cuda-runtime-init-failed";
+                if (n->is_delayed()) n->dismiss(true);
             }
+            // else: built with CUDA + GPU available -> silent (case 4)
+#else
+            // Built without CUDA: distinguish "runtime not installed" from "runtime installed but unused".
+            if (!directory_exists("/usr/local/cuda"))
+            {
+                std::string message = "Running on NVIDIA Jetson without the CUDA runtime installed.\n"
+                    "For better performance, install the CUDA runtime\n"
+                    "(e.g. via the NVIDIA JetPack SDK, or 'sudo apt-get install cuda-runtime-*').";
+                auto n = not_model->add_notification({ message,
+                     RS2_LOG_SEVERITY_WARN,
+                     RS2_NOTIFICATION_CATEGORY_COUNT });
+                n->enable_complex_dismiss = true;
+                n->delay_id = "jetson-cuda-runtime-missing";
+                if (n->is_delayed()) n->dismiss(true);
+            }
+            else
+            {
+                std::string message = "Running on NVIDIA Jetson with the CUDA runtime installed,\n"
+                    "but realsense-viewer is not using CUDA.\n"
+                    "For better performance, rebuild librealsense with -DBUILD_WITH_CUDA=ON.";
+                auto n = not_model->add_notification({ message,
+                     RS2_LOG_SEVERITY_WARN,
+                     RS2_NOTIFICATION_CATEGORY_COUNT });
+                n->enable_complex_dismiss = true;
+                n->delay_id = "jetson-cuda-not-used";
+                if (n->is_delayed()) n->dismiss(true);
+            }
+#endif
         }
 
 #endif
