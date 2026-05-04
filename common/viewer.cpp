@@ -872,12 +872,14 @@ namespace rs2
             {
                 std::string message = "Running on NVIDIA Jetson and realsense-viewer was built with CUDA,\n"
                     "but the CUDA runtime failed to initialize (no GPU device reported).\n"
-                    "Check the CUDA driver/library stack on this device; see the SDK log for the cudaGetDeviceCount error.";
+                    "Check the CUDA driver/library stack on this device;\n"
+                    "see the SDK log for the cudaGetDeviceCount error.";
                 auto n = not_model->add_notification({ message,
                      RS2_LOG_SEVERITY_WARN,
                      RS2_NOTIFICATION_CATEGORY_COUNT });
                 n->enable_complex_dismiss = true;
                 n->delay_id = "jetson-cuda-runtime-init-failed";
+                n->width = 600;  // wider than default 320 so the message is not truncated
                 if (n->is_delayed()) n->dismiss(true);
             }
             // else: built with CUDA + GPU available -> silent (case 4)
@@ -895,6 +897,7 @@ namespace rs2
                      RS2_NOTIFICATION_CATEGORY_COUNT });
                 n->enable_complex_dismiss = true;
                 n->delay_id = "jetson-cuda-runtime-missing";
+                n->width = 600;  // wider than default 320 so the message is not truncated
                 if (n->is_delayed()) n->dismiss(true);
             }
             else
@@ -907,6 +910,7 @@ namespace rs2
                      RS2_NOTIFICATION_CATEGORY_COUNT });
                 n->enable_complex_dismiss = true;
                 n->delay_id = "jetson-cuda-not-used";
+                n->width = 600;  // wider than default 320 so the message is not truncated
                 if (n->is_delayed()) n->dismiss(true);
             }
 #endif
