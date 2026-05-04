@@ -47,7 +47,7 @@ void init_sensor(py::module &m) {
              "like versions of various internal components.", "info"_a)
         .def("set_notifications_callback", [](const rs2::sensor& self, std::function<void(rs2::notification)> callback) {
             self.set_notifications_callback(callback);
-        }, "Register Notifications callback", "callback"_a)
+        }, "Register Notifications callback", "callback"_a, py::call_guard<py::gil_scoped_release>())
         .def("open", (void (rs2::sensor::*)(const std::vector<rs2::stream_profile>&) const) &rs2::sensor::open,
              "Open sensor for exclusive access, by committing to a composite configuration, specifying one or "
              "more stream profiles.", "profiles"_a, py::call_guard<py::gil_scoped_release>())
