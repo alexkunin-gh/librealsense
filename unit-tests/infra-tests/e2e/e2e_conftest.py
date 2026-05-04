@@ -47,6 +47,7 @@ class FakeDevice:
     def __init__(self, sn, name):
         self.sn = sn
         self.name = name
+        self.connection_type = "USB"
 
 _inventory = {
     "D455": ("111", "D400"),

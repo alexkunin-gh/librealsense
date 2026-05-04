@@ -82,6 +82,7 @@ class Device:
             self._product_line = dev.get_info( rs.camera_info.product_line )
         self._physical_port = dev.supports( rs.camera_info.physical_port ) and dev.get_info( rs.camera_info.physical_port ) or None
 
+        self._connection_type = None  # remains None if camera_info.connection_type is unsupported
         if dev.supports(rs.camera_info.connection_type):
             self._connection_type = dev.get_info(rs.camera_info.connection_type)
             self._is_dds = self._connection_type == "DDS"
