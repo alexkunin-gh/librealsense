@@ -883,11 +883,13 @@ namespace rs2
             // else: built with CUDA + GPU available -> silent (case 4)
 #else
             // Built without CUDA: distinguish "runtime not installed" from "runtime installed but unused".
+            // /usr/local/cuda is the canonical L4T / JetPack install location for the CUDA runtime
+            // (normally a symlink to /usr/local/cuda-X.Y). A non-standard install will produce a
+            // false-positive "install runtime" popup — acceptable for a startup hint.
             if (!directory_exists("/usr/local/cuda"))
             {
                 std::string message = "Running on NVIDIA Jetson without the CUDA runtime installed.\n"
-                    "For better performance, install the CUDA runtime\n"
-                    "(e.g. via the NVIDIA JetPack SDK, or 'sudo apt-get install cuda-runtime-*').";
+                    "For better performance, install the CUDA runtime via the NVIDIA JetPack SDK.";
                 auto n = not_model->add_notification({ message,
                      RS2_LOG_SEVERITY_WARN,
                      RS2_NOTIFICATION_CATEGORY_COUNT });
