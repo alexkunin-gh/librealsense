@@ -121,19 +121,18 @@ def test_tare_calibration(test_device):
     if is_mipi_device():
         pytest.skip("MIPI/GMSL devices require host assistance for tare calibration")
     global _target_z
-    if True:  # preserves legacy `with test.closure(...)` indentation for git rename detection
-        try:
-            host_assistance = False
-            if _target_z is None:
-                _target_z = calculate_target_z()
-                assert _target_z > TARGET_Z_MIN and _target_z < TARGET_Z_MAX
+    try:
+        host_assistance = False
+        if _target_z is None:
+            _target_z = calculate_target_z()
+            assert _target_z > TARGET_Z_MIN and _target_z < TARGET_Z_MAX
 
-            tare_json = tare_calibration_json(None, host_assistance)
-            image_width, image_height, fps = 256, 144, 90
-            config, pipeline, calib_dev = get_calibration_device(image_width, image_height, fps)
-            health_factor, new_calib_bytes = calibration_main(config, pipeline, calib_dev, False, tare_json, _target_z, host_assistance, return_table=True)
+        tare_json = tare_calibration_json(None, host_assistance)
+        image_width, image_height, fps = 256, 144, 90
+        config, pipeline, calib_dev = get_calibration_device(image_width, image_height, fps)
+        health_factor, new_calib_bytes = calibration_main(config, pipeline, calib_dev, False, tare_json, _target_z, host_assistance, return_table=True)
 
-            assert abs(health_factor) < HEALTH_FACTOR_THRESHOLD
-        except Exception as e:
-            log.error(f"Tare calibration test failed: {e}")
-            pytest.fail(f"Tare calibration test failed: {e}")
+        assert abs(health_factor) < HEALTH_FACTOR_THRESHOLD
+    except Exception as e:
+        log.error(f"Tare calibration test failed: {e}")
+        pytest.fail(f"Tare calibration test failed: {e}")

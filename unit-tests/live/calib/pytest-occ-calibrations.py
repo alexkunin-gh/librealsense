@@ -51,36 +51,34 @@ def test_occ_calibration(test_device):
     # mipi devices do not support OCC calibration without host assistance
     if is_mipi_device():
         pytest.skip("MIPI/GMSL devices require host assistance — covered by test_occ_calibration_with_host_assistance")
-    if True:  # preserves legacy `with test.closure(...)` indentation for git rename detection
-        for iteration in range(1, NUM_ITERATIONS + 1):
-            try:
-                log.info(f"Starting OCC calibration iteration {iteration}/{NUM_ITERATIONS}")
-                host_assistance = False
-                occ_json = on_chip_calibration_json(None, host_assistance)
-                image_width, image_height, fps = 256, 144, 90
-                config, pipeline, calib_dev = get_calibration_device(image_width, image_height, fps)
-                health_factor, new_calib_bytes = calibration_main(config, pipeline, calib_dev, True, occ_json, None, return_table=True)
-                assert abs(health_factor) < HEALTH_FACTOR_THRESHOLD or new_calib_bytes is None
-                log.info(f"Completed OCC calibration iteration {iteration}/{NUM_ITERATIONS} - Health factor: {health_factor}")
-            except Exception as e:
-                log.error(f"OCC calibration test iteration {iteration} failed: {e}")
-                pytest.fail(f"OCC calibration test iteration {iteration} failed: {e}")
+    for iteration in range(1, NUM_ITERATIONS + 1):
+        try:
+            log.info(f"Starting OCC calibration iteration {iteration}/{NUM_ITERATIONS}")
+            host_assistance = False
+            occ_json = on_chip_calibration_json(None, host_assistance)
+            image_width, image_height, fps = 256, 144, 90
+            config, pipeline, calib_dev = get_calibration_device(image_width, image_height, fps)
+            health_factor, new_calib_bytes = calibration_main(config, pipeline, calib_dev, True, occ_json, None, return_table=True)
+            assert abs(health_factor) < HEALTH_FACTOR_THRESHOLD or new_calib_bytes is None
+            log.info(f"Completed OCC calibration iteration {iteration}/{NUM_ITERATIONS} - Health factor: {health_factor}")
+        except Exception as e:
+            log.error(f"OCC calibration test iteration {iteration} failed: {e}")
+            pytest.fail(f"OCC calibration test iteration {iteration} failed: {e}")
 
 
 def test_occ_calibration_with_host_assistance(test_device):
     if not is_mipi_device():
         pytest.skip("Host-assistance OCC calibration is only run on MIPI/GMSL devices")
-    if True:  # preserves legacy `with test.closure(...)` indentation for git rename detection
-        for iteration in range(1, NUM_ITERATIONS + 1):
-            try:
-                log.info(f"Starting OCC calibration with host assistance iteration {iteration}/{NUM_ITERATIONS}")
-                host_assistance = True
-                image_width, image_height, fps = 1280, 720, 30
-                occ_json = on_chip_calibration_json(None, host_assistance)
-                config, pipeline, calib_dev = get_calibration_device(image_width, image_height, fps)
-                health_factor, new_calib_bytes = calibration_main(config, pipeline, calib_dev, True, occ_json, None, host_assistance=host_assistance, return_table=True)
-                assert abs(health_factor) < HEALTH_FACTOR_THRESHOLD or new_calib_bytes is None
-                log.info(f"Completed OCC calibration iteration {iteration}/{NUM_ITERATIONS} - Health factor: {health_factor}")
-            except Exception as e:
-                log.error(f"OCC calibration test with host assistance iteration {iteration} failed: {e}")
-                pytest.fail(f"OCC calibration test with host assistance iteration {iteration} failed: {e}")
+    for iteration in range(1, NUM_ITERATIONS + 1):
+        try:
+            log.info(f"Starting OCC calibration with host assistance iteration {iteration}/{NUM_ITERATIONS}")
+            host_assistance = True
+            image_width, image_height, fps = 1280, 720, 30
+            occ_json = on_chip_calibration_json(None, host_assistance)
+            config, pipeline, calib_dev = get_calibration_device(image_width, image_height, fps)
+            health_factor, new_calib_bytes = calibration_main(config, pipeline, calib_dev, True, occ_json, None, host_assistance=host_assistance, return_table=True)
+            assert abs(health_factor) < HEALTH_FACTOR_THRESHOLD or new_calib_bytes is None
+            log.info(f"Completed OCC calibration iteration {iteration}/{NUM_ITERATIONS} - Health factor: {health_factor}")
+        except Exception as e:
+            log.error(f"OCC calibration test with host assistance iteration {iteration} failed: {e}")
+            pytest.fail(f"OCC calibration test with host assistance iteration {iteration} failed: {e}")
