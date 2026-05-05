@@ -46,3 +46,16 @@ def test_enable_only_no_hub_raises_when_wait_for_times_out(monkeypatch):
     monkeypatch.setattr(dev, '_wait_for', lambda *a, **kw: False)
     with pytest.raises(TimeoutError, match="did not enumerate"):
         dev.enable_only(['111'], recycle=False, timeout=1)
+
+
+def test_enable_only_no_hub_recycle_raises_when_hw_reset_times_out(monkeypatch):
+    """No hub + recycle=True: enable_only delegates to hw_reset; timeout should raise."""
+    monkeypatch.setattr(dev, 'hub', None)
+    monkeypatch.setattr(dev, 'time', types.SimpleNamespace(sleep=lambda _: None))
+    monkeypatch.setattr(dev, '_device_by_sn', {
+        '111': types.SimpleNamespace(port=None, is_dds=False, handle=MagicMock())
+    })
+    monkeypatch.setattr(dev, '_wait_for', lambda *a, **kw: False)
+    monkeypatch.setattr(dev, '_wait_until_removed', lambda *a, **kw: True)
+    with pytest.raises(TimeoutError, match="did not enumerate"):
+        dev.enable_only(['111'], recycle=True, timeout=1)
