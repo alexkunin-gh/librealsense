@@ -635,7 +635,7 @@ def enable_only( serial_numbers, recycle = False, timeout = MAX_ENUMERATION_TIME
     elif recycle:
         #
         if not hw_reset( serial_numbers, timeout = timeout ):
-            raise TimeoutError( f'devices did not enumerate within {timeout}s after hw_reset: {serial_numbers}' )
+            raise RuntimeError( f'hw_reset failed for: {serial_numbers}' )
         #
     else:
         log.d( 'no hub; ports left as-is' )

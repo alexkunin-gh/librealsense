@@ -48,8 +48,13 @@ def test_enable_only_no_hub_raises_when_wait_for_times_out(monkeypatch):
         dev.enable_only(['111'], recycle=False, timeout=1)
 
 
-def test_enable_only_no_hub_recycle_raises_when_hw_reset_times_out(monkeypatch):
-    """No hub + recycle=True: enable_only delegates to hw_reset; timeout should raise."""
+def test_enable_only_no_hub_recycle_raises_when_hw_reset_fails(monkeypatch):
+    """No hub + recycle=True: enable_only delegates to hw_reset; failure should raise.
+
+    hw_reset can return False for several reasons (hardware_reset() raised, devices
+    didn't disappear, devices didn't reappear) — so we raise RuntimeError, not
+    TimeoutError, since "timeout" doesn't accurately describe all of them.
+    """
     monkeypatch.setattr(dev, 'hub', None)
     monkeypatch.setattr(dev, 'time', types.SimpleNamespace(sleep=lambda _: None))
     monkeypatch.setattr(dev, '_device_by_sn', {
@@ -57,5 +62,5 @@ def test_enable_only_no_hub_recycle_raises_when_hw_reset_times_out(monkeypatch):
     })
     monkeypatch.setattr(dev, '_wait_for', lambda *a, **kw: False)
     monkeypatch.setattr(dev, '_wait_until_removed', lambda *a, **kw: True)
-    with pytest.raises(TimeoutError, match="did not enumerate"):
+    with pytest.raises(RuntimeError, match="hw_reset failed"):
         dev.enable_only(['111'], recycle=True, timeout=1)
