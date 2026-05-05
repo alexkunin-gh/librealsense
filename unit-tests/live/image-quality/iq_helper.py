@@ -193,8 +193,48 @@ def make_depth_filter_chain():
     return apply
 
 
-def is_color_close(actual, expected, tolerance):
-    return all(abs(int(a) - int(e)) <= tolerance for a, e in zip(actual, expected))
+# HSV tolerances for is_color_close. Per-channel RGB tolerance is sensitive to
+# overall scene brightness — when lab lighting changes, every bright color shifts
+# together and trips the per-channel check. HSV separates the concerns: hue catches
+# real color errors, value absorbs illumination shifts.
+#
+# Each axis means a different thing, so each gets a different slack:
+#   hue: position on the color wheel — the "color name" (yellow vs orange vs red).
+#        H wraps at 180 in OpenCV. Tight (~5% of the wheel) because hue *is* the
+#        identity of a chromatic color; loose tolerance here would let yellow
+#        pass for orange.
+#   sat: how vivid vs how grayish the color is. Cameras desaturate dim scenes,
+#        so loose — but not so loose that a pure color passes for a muted one.
+#   val: brightness. Loose because brightness is what shifts most across rigs and
+#        times of day; this is the axis that absorbs illumination changes.
+TOLERANCE = {'hue': 10, 'sat': 70, 'val': 70}
+ACHROMATIC_S = 40      # expected S below this → treat as gray/white/black (hue is meaningless)
+ACHROMATIC_S_MAX = 100  # sampled S must stay near-grayscale for an achromatic match
+                        # (loose because at very low V — e.g. black — sensor noise inflates
+                        # the OpenCV S = (V - min) / V calculation; tight values false-fail)
+
+
+def is_color_close(actual, expected):
+    """Compare two RGB triples in HSV space.
+
+    Chromatic colors: hue distance (with wrap), plus saturation and value within tolerance.
+    Achromatic colors (gray/white/black, expected S < ACHROMATIC_S): hue is undefined, so
+    we require the sampled pixel to also be near-grayscale and the brightness to match.
+    """
+    actual_h, actual_s, actual_v = (int(c) for c in
+        cv2.cvtColor(np.uint8([[[actual[2], actual[1], actual[0]]]]), cv2.COLOR_BGR2HSV)[0, 0])
+    expected_h, expected_s, expected_v = (int(c) for c in
+        cv2.cvtColor(np.uint8([[[expected[2], expected[1], expected[0]]]]), cv2.COLOR_BGR2HSV)[0, 0])
+
+    val_diff = abs(actual_v - expected_v)
+    if expected_s < ACHROMATIC_S:
+        return actual_s <= ACHROMATIC_S_MAX and val_diff <= TOLERANCE['val']
+
+    hue_diff = abs(actual_h - expected_h)
+    hue_diff = min(hue_diff, 180 - hue_diff)  # H wraps at 180
+    return (hue_diff <= TOLERANCE['hue']
+            and abs(actual_s - expected_s) <= TOLERANCE['sat']
+            and val_diff <= TOLERANCE['val'])
 
 
 _snapshot_saved = False

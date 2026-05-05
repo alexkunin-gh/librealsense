@@ -215,10 +215,12 @@ def pytest_configure(config):
     config.addinivalue_line("python_classes", "Test*")
     config.addinivalue_line("python_functions", "test_*")
 
-    # Default timeout: 200s, thread-based (Windows-compatible)
+    # Default timeout: 200s per test attempt
     if not config.getoption("--timeout", default=None):
         config.option.timeout = 200
-        config.option.timeout_method = "thread"
+        config.option.timeout_method = "thread" if sys.platform == "win32" else "signal"
+        # pytest-timeout reads func_only from ini only, not the CLI option attribute
+        config.inicfg["timeout_func_only"] = "true"
 
     # Suppress verbose failure tracebacks — per-test log files have full details.
     # Keep short one-liners (-rfE) so Jenkins Groovy can parse them for log file links.

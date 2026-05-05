@@ -18,7 +18,6 @@ pytestmark = [
 ]
 
 NUM_FRAMES = 100 # Number of frames to check
-COLOR_TOLERANCE = 60 # Acceptable per-channel deviation in RGB values
 FRAMES_PASS_THRESHOLD =0.8 # Percentage of frames that needs to pass
 DEBUG_MODE = False
 
@@ -119,7 +118,7 @@ def run_test(ctx, resolution, fps):
                 b, g, r = (int(v) for v in color_frame_roi[y, x])  # stream is BGR, convert to RGB
                 pixel = (r, g, b)
                 color_sums[color] += pixel
-                if is_color_close(pixel, expected_rgb, COLOR_TOLERANCE):
+                if is_color_close(pixel, expected_rgb):
                     color_match_count[color] += 1
                 else:
                     log.debug(f"Frame {i} - {color} at ({x},{y}) sampled: {pixel} too far from expected {expected_rgb}")
