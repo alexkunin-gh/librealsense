@@ -12,6 +12,7 @@ from iq_helper import find_roi_location, get_roi_from_frame, is_color_close, sav
 log = logging.getLogger(__name__)
 
 pytestmark = [
+    pytest.mark.context("image-quality"),
     pytest.mark.device_each("D400*"),
     pytest.mark.device_exclude("D401"),
 ]

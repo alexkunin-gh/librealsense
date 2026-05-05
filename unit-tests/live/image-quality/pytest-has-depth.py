@@ -20,6 +20,7 @@ BLACK_PIXEL_THRESHOLD = 0.5  # Fail if more than 50% pixels are zero
 FRAMES_TO_CHECK = 30
 
 pytestmark = [
+    pytest.mark.context("image-quality"),
     pytest.mark.device_each("D400*"),
     pytest.mark.device_each("D500*"),
     pytest.mark.device_exclude("D401"),

@@ -165,6 +165,13 @@ def pytest_addoption(parser):
              "--tag <name> (run only tests with marker, maps to -m), "
              "--retries N (retry failed tests N times)."
     )
+    group.addoption(
+        "--test-dir",
+        action="store",
+        default=None,
+        help="Restrict pytest discovery to tests under this directory "
+             "(matches run-unit-tests.py --test-dir for shared UNIT_TESTS_ARGS)."
+    )
 
 
 # Shared context tags (e.g. "nightly", "weekly") — tests check this to adjust behavior
@@ -303,6 +310,10 @@ def pytest_generate_tests(metafunc):
 
 def pytest_collection_modifyitems(config, items):
     """Auto-skip nightly/dds tests, filter --live, sort by priority."""
+    test_dir = config.getoption("--test-dir", default=None)
+    if test_dir:
+        abs_test_dir = os.path.abspath(test_dir)
+        items[:] = [item for item in items if str(item.path).startswith(abs_test_dir)]
     filter_and_sort_items(config, items)
 
 

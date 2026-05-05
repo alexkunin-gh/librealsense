@@ -23,6 +23,7 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.context("nightly"),
+    pytest.mark.context("calibration"),
     pytest.mark.device("D400*"),
     pytest.mark.device_exclude("D401"),
 ]
