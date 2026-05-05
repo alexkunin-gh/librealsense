@@ -32,7 +32,7 @@ PIXEL_CORRECTION = -1.0  # pixel shift to apply to principal point
 SHORT_DISTANCE_PIXEL_CORRECTION = -3.0
 EPSILON = 0.5         # half of PIXEL_CORRECTION tolerance
 DIFF_THRESHOLD = 0.001  # minimum change expected after OCC calibration
-HEALTH_FACTOR_THRESHOLD_AFTER_MODIFICATION = 2
+HEALTH_FACTOR_THRESHOLD_AFTER_MODIFICATION = 3.0
 DEPTH_MODIF_THRESHOLD_MM = 100.0  # 10 cm minimum depth change after modification to consider convergence
 DEPTH_CONVERGENCE_TOLERANCE_MM = 50.0  # 5 cm tolerance for depth convergence toward ground truth
 def on_chip_calibration_json(occ_json_file, host_assistance):

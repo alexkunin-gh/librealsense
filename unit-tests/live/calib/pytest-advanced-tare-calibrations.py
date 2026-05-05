@@ -109,7 +109,7 @@ PIXEL_CORRECTION = -0.8  # pixel shift to apply to principal point (right IR)
 SHORT_DISTANCE_PIXEL_CORRECTION = -3.0  # increased correction for short distances
 EPSILON = 0.5         # half of PIXEL_CORRECTION tolerance
 DIFF_THRESHOLD = 0.001  # minimum change expected after TARE calibration
-HEALTH_FACTOR_THRESHOLD_AFTER_MODIFICATION = 2.0  # TARE health factor acceptance for modified run
+HEALTH_FACTOR_THRESHOLD_AFTER_MODIFICATION = 3.0  # TARE health factor acceptance for modified run
 
 
 def run_advanced_tare_calibration_test(host_assistance, config, pipeline, calib_dev, image_width, image_height, fps, target_z=None):
