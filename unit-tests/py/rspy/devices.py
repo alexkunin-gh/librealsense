@@ -629,7 +629,8 @@ def enable_only( serial_numbers, recycle = False, timeout = MAX_ENUMERATION_TIME
             else:
                 log.d( 'no hub ports to enable; leaving hub as-is' )
         #
-        _wait_for( serial_numbers, timeout = timeout )
+        if not _wait_for( serial_numbers, timeout = timeout ):
+            raise TimeoutError( f'devices did not enumerate within {timeout}s after hub enable: {serial_numbers}' )
         #
     elif recycle:
         #
@@ -638,7 +639,8 @@ def enable_only( serial_numbers, recycle = False, timeout = MAX_ENUMERATION_TIME
     else:
         log.d( 'no hub; ports left as-is' )
         # even without reset, enable_only should wait for the devices to be available again
-        _wait_for(serial_numbers, timeout=timeout)
+        if not _wait_for( serial_numbers, timeout = timeout ):
+            raise TimeoutError( f'devices did not enumerate within {timeout}s: {serial_numbers}' )
 
 
 def enable_all():
