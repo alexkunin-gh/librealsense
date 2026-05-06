@@ -1,5 +1,5 @@
 # License: Apache 2.0. See LICENSE file in root directory.
-# Copyright(c) 2021 RealSense, Inc. All Rights Reserved.
+# Copyright(c) 2026 RealSense, Inc. All Rights Reserved.
 
 import logging
 import numpy as np
@@ -28,10 +28,18 @@ def matrix_4x4_from_extrinsics(extr):
     r = extr.rotation
     t = extr.translation
     m = np.eye(4)
-    m[0, 0] = r[0]; m[1, 0] = r[1]; m[2, 0] = r[2]
-    m[0, 1] = r[3]; m[1, 1] = r[4]; m[2, 1] = r[5]
-    m[0, 2] = r[6]; m[1, 2] = r[7]; m[2, 2] = r[8]
-    m[0, 3] = t[0]; m[1, 3] = t[1]; m[2, 3] = t[2]
+    m[0, 0] = r[0]
+    m[1, 0] = r[1]
+    m[2, 0] = r[2]
+    m[0, 1] = r[3]
+    m[1, 1] = r[4]
+    m[2, 1] = r[5]
+    m[0, 2] = r[6]
+    m[1, 2] = r[7]
+    m[2, 2] = r[8]
+    m[0, 3] = t[0]
+    m[1, 3] = t[1]
+    m[2, 3] = t[2]
     return m
 
 
