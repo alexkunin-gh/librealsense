@@ -11,7 +11,7 @@ from rspy import libci
 
 log = logging.getLogger(__name__)
 
-pytestmark = [pytest.mark.device_each("D400*")]
+pytestmark = [pytest.mark.device("D400*")]
 
 fw_dir = os.path.join( libci.home, 'data/FW', '' )
 d400_fw_min_version_1 = 'Signed_Image_UVC_5_8_15_0.bin'
@@ -85,12 +85,12 @@ def test_firmware_compatibility(test_device):
     updatable_device = dev.as_updatable()
     product_line_dir = dev.get_info(rs.camera_info.product_line) + '/'
     pid = dev.get_info(rs.camera_info.product_id)
-    log.info(dev.get_info(rs.camera_info.name) + " found")
+    log.info("%s found", dev.get_info(rs.camera_info.name))
 
     if pid in pid_to_min_fw_version:
         min_fw_version = pid_to_min_fw_version[pid]
         min_fw_version_path = get_fw_version_path(product_line_dir, min_fw_version)
-        log.info("fw min version: " + min_fw_version)
+        log.info("fw min version: %s", min_fw_version)
         with open(min_fw_version_path, 'rb') as binary_file:
             fw_image = bytearray(binary_file.read())
             check_firmware_compatible(updatable_device, fw_image)
@@ -99,7 +99,7 @@ def test_firmware_compatibility(test_device):
         if min_fw_version in fw_previous_version:
             one_before_min_fw_version = fw_previous_version[min_fw_version]
             one_before_min_fw_version_path = get_fw_version_path(product_line_dir, one_before_min_fw_version)
-            log.info("firware version defined as non-compatible: " + one_before_min_fw_version)
+            log.info("firware version defined as non-compatible: %s", one_before_min_fw_version)
             with open(one_before_min_fw_version_path, 'rb') as binary_file:
                 fw_image = bytearray(binary_file.read())
                 check_firmware_not_compatible(updatable_device, fw_image)
@@ -111,7 +111,7 @@ def test_firmware_compatibility(test_device):
     if pid in pid_to_max_fw_version:
         max_fw_version = pid_to_max_fw_version[pid]
         max_fw_version_path = get_fw_version_path(product_line_dir, max_fw_version)
-        log.info("fw max version: " + max_fw_version)
+        log.info("fw max version: %s", max_fw_version)
         with open(max_fw_version_path, 'rb') as binary_file:
             fw_image = bytearray(binary_file.read())
             check_firmware_compatible(updatable_device, fw_image)
@@ -119,7 +119,7 @@ def test_firmware_compatibility(test_device):
         if max_fw_version in fw_next_version:
             one_after_max_fw_version = fw_next_version[max_fw_version]
             one_after_max_fw_version_path = get_fw_version_path(product_line_dir, one_after_max_fw_version)
-            log.info("fw max version: " + max_fw_version + ", one after: " + one_after_max_fw_version)
+            log.info("fw max version: %s, one after: %s", max_fw_version, one_after_max_fw_version)
             with open(one_after_max_fw_version_path, 'rb') as binary_file:
                 fw_image = bytearray(binary_file.read())
                 check_firmware_not_compatible(updatable_device, fw_image)
