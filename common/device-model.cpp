@@ -2994,6 +2994,12 @@ namespace rs2
                         ImGui::SetCursorPos({ windows_width - 42, pos.y - 3 });
 
                         const bool pb_available = pb->is_available();
+                        struct DisabledGuard {
+                            bool active, ended;
+                            DisabledGuard( bool a ) : active( a ), ended( false ) { if( active ) ImGui::BeginDisabled( true ); }
+                            void end() { if( active && !ended ) { ended = true; ImGui::EndDisabled(); } }
+                            ~DisabledGuard() { end(); }
+                        } dg( !pb_available );
                         try
                         {
                             ImGui::PushFont(window.get_font());
@@ -3003,8 +3009,6 @@ namespace rs2
                             ImGui::PushStyleColor(ImGuiCol_ButtonActive, sensor_bg);
                             int font_size = window.get_font_size();
                             const ImVec2 button_size = { font_size * 2.f, font_size * 1.5f };
-
-                            if( !pb_available ) ImGui::BeginDisabled( true );
 
                             if (!sub->post_processing_enabled)
                             {
@@ -3078,20 +3082,16 @@ namespace rs2
                                 }
                             }
 
-                            if( !pb_available )
-                            {
-                                ImGui::EndDisabled();
-                                if( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled )
-                                    && !pb->unavailable_tooltip.empty() )
-                                    RsImGui::CustomTooltip( "%s", pb->unavailable_tooltip.c_str() );
-                            }
+                            dg.end();
+                            if( !pb_available && !pb->unavailable_tooltip.empty()
+                                && ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled ) )
+                                RsImGui::CustomTooltip( "%s", pb->unavailable_tooltip.c_str() );
 
                             ImGui::PopStyleColor(5);
                             ImGui::PopFont();
                         }
                         catch (...)
                         {
-                            if( !pb_available ) ImGui::EndDisabled();
                             ImGui::PopStyleColor(5);
                             ImGui::PopFont();
                             throw;

@@ -9,6 +9,7 @@
 #include <rsutils/easylogging/easyloggingpp.h>
 #include <cstring>
 #include <cmath>
+#include <limits>
 #endif
 
 min_z_depth_improver::min_z_depth_improver()  = default;
@@ -60,7 +61,7 @@ bool min_z_depth_improver::init( rs2::video_frame const & ir_left,
 
     try
     {
-        _impl = std::make_unique< rs_depth::DepthRangeImprover >( cal );
+        _impl.reset( new rs_depth::DepthRangeImprover( cal ) );
     }
     catch( std::exception const & e )
     {
@@ -97,7 +98,8 @@ rs2::frame min_z_depth_improver::run( rs2::frameset            original_fs,
     {
         _depth_mm_buf.resize( w * h );
         for( int i = 0; i < w * h; ++i )
-            _depth_mm_buf[i] = static_cast< uint16_t >( raw[i] * scale_mm );
+            _depth_mm_buf[i] = static_cast< uint16_t >( std::min( raw[i] * scale_mm,
+                static_cast< float >( std::numeric_limits< uint16_t >::max() ) ) );
         depth_input = _depth_mm_buf.data();
     }
 
