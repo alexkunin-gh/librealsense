@@ -186,7 +186,7 @@ void init_internal(py::module &m) {
     
     /** rs_internal.hpp **/
     // rs2::software_sensor
-    py::class_<rs2::software_sensor, rs2::sensor> software_sensor(m, "software_sensor");
+    py::class_<rs2::software_sensor, rs2::sensor, py_holder<rs2::software_sensor>> software_sensor(m, "software_sensor");
     software_sensor
         .def( "add_video_stream",
               &rs2::software_sensor::add_video_stream,
@@ -212,7 +212,7 @@ void init_internal(py::module &m) {
         .def("on_notification", &rs2::software_sensor::on_notification, "notif"_a);
 
     // rs2::software_device
-    py::class_<rs2::software_device, rs2::device> software_device(m, "software_device");
+    py::class_<rs2::software_device, rs2::device, py_holder<rs2::software_device>> software_device(m, "software_device");
     software_device.def(py::init<>())
         .def("add_sensor", &rs2::software_device::add_sensor, "Add software sensor with given name "
             "to the software device.", "name"_a)
@@ -248,7 +248,7 @@ void init_internal(py::module &m) {
         .def("get_sequence_id", &rs2::firmware_log_parsed_message::sequence_id, "Get sequence id");
 
     // rs2::firmware_logger
-    py::class_<rs2::firmware_logger, rs2::device> firmware_logger(m, "firmware_logger");
+    py::class_<rs2::firmware_logger, rs2::device, py_holder<rs2::firmware_logger>> firmware_logger(m, "firmware_logger");
     firmware_logger.def(py::init<rs2::device>(), "device"_a)
         .def("create_message", &rs2::firmware_logger::create_message, "Create FW Log")
         .def("create_parsed_message", &rs2::firmware_logger::create_parsed_message, "Create FW Parsed Log")

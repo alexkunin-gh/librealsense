@@ -12,7 +12,11 @@ Copyright(c) 2017 RealSense, Inc. All Rights Reserved. */
 
 void init_device(py::module &m) {
     /** rs_device.hpp **/
-    py::class_<rs2::device> device(m, "device"); // No docstring in C++
+    // rs2::device destructor calls functions that might wait for Python callbacks to finish (e.g. dispatcher::stop)
+    // Those callbacks need to hold the GIL so the py_holder releases our hold of the GIL to let them run.
+    // Not releasing the GIL might lead to a deadlock (in certain scenario/timing).
+    // Note - device inheritors need to use py_holder as well.
+    py::class_<rs2::device, py_holder<rs2::device>> device(m, "device"); // No docstring in C++
     device.def("query_sensors", &rs2::device::query_sensors, "Returns the list of adjacent devices, "
                "sharing the same physical parent composite device.")
         .def_property_readonly("sensors", &rs2::device::query_sensors, "List of adjacent devices, "
@@ -27,7 +31,8 @@ void init_device(py::module &m) {
         .def("supports", &rs2::device::supports, "Check if specific camera info is supported.", "info"_a)
         .def("get_info", &rs2::device::get_info, "Retrieve camera specific information, "
              "like versions of various internal components", "info"_a)
-        .def("hardware_reset", &rs2::device::hardware_reset, "Send hardware reset request to the device")
+        .def("hardware_reset", &rs2::device::hardware_reset, "Send hardware reset request to the device",
+             py::call_guard<py::gil_scoped_release>())
         .def(py::init<>())
         .def("__nonzero__", &rs2::device::operator bool) // Called to implement truth value testing in Python 2
         .def("__bool__", &rs2::device::operator bool) // Called to implement truth value testing in Python 3
@@ -90,7 +95,7 @@ void init_device(py::module &m) {
 
     // not binding update_progress_callback, templated
 
-    py::class_<rs2::updatable, rs2::device> updatable(m, "updatable"); // No docstring in C++
+    py::class_<rs2::updatable, rs2::device, py_holder<rs2::updatable>> updatable(m, "updatable"); // No docstring in C++
     updatable.def(py::init<rs2::device>())
         .def("enter_update_state", &rs2::updatable::enter_update_state, "Move the device to update state, this will cause the updatable device to disconnect and reconnect as an update device.", py::call_guard<py::gil_scoped_release>())
         .def("create_flash_backup", (std::vector<uint8_t>(rs2::updatable::*)() const) &rs2::updatable::create_flash_backup,
@@ -109,7 +114,7 @@ void init_device(py::module &m) {
         .def("check_firmware_compatibility", &rs2::updatable::check_firmware_compatibility, "Check firmware compatibility with device. "
             "This method should be called before burning a signed firmware.", "image"_a);
 
-    py::class_<rs2::update_device, rs2::device> update_device(m, "update_device");
+    py::class_<rs2::update_device, rs2::device, py_holder<rs2::update_device>> update_device(m, "update_device");
     update_device.def(py::init<rs2::device>())
         .def("update", [](rs2::update_device& self, const std::vector<uint8_t>& fw_image) { return self.update(fw_image); },
              "Update an updatable device to the provided firmware. This call is executed on the caller's thread.", "fw_image"_a, py::call_guard<py::gil_scoped_release>())
@@ -117,7 +122,7 @@ void init_device(py::module &m) {
              "Update an updatable device to the provided firmware. This call is executed on the caller's thread and provides progress notifications via the callback.",
              "fw_image"_a, "callback"_a, py::call_guard<py::gil_scoped_release>());
 
-    py::class_<rs2::auto_calibrated_device, rs2::device> auto_calibrated_device(m, "auto_calibrated_device");
+    py::class_<rs2::auto_calibrated_device, rs2::device, py_holder<rs2::auto_calibrated_device>> auto_calibrated_device(m, "auto_calibrated_device");
     auto_calibrated_device.def(py::init<rs2::device>(), "device"_a)
         .def("write_calibration", &rs2::auto_calibrated_device::write_calibration, "Write calibration that was set by set_calibration_table to device's EEPROM.", py::call_guard<py::gil_scoped_release>())
         .def("run_on_chip_calibration", [](rs2::auto_calibrated_device& self, std::string json_content, int timeout_ms)
@@ -209,7 +214,7 @@ void init_device(py::module &m) {
         .def("get_calibration_config", &rs2::auto_calibrated_device::get_calibration_config, "Get Calibration Config Table", py::call_guard<py::gil_scoped_release>())
         .def("set_calibration_config", &rs2::auto_calibrated_device::set_calibration_config, "Set Calibration Config Table", "calibration_config_json_str"_a, py::call_guard<py::gil_scoped_release>());
 
-    py::class_<rs2::device_calibration, rs2::device> device_calibration( m, "device_calibration" );
+    py::class_<rs2::device_calibration, rs2::device, py_holder<rs2::device_calibration>> device_calibration( m, "device_calibration" );
     device_calibration.def( py::init<rs2::device>(), "device"_a )
         .def( "trigger_device_calibration",
             []( rs2::device_calibration & self, rs2_calibration_type type )
@@ -241,7 +246,7 @@ void init_device(py::module &m) {
             "Register (only once!) a callback that gets called for each change in calibration", "callback"_a );
 
 
-    py::class_<rs2::calibration_change_device, rs2::device> calibration_change_device(m, "calibration_change_device");
+    py::class_<rs2::calibration_change_device, rs2::device, py_holder<rs2::calibration_change_device>> calibration_change_device(m, "calibration_change_device");
     calibration_change_device.def(py::init<rs2::device>(), "device"_a)
         .def("register_calibration_change_callback",
             [](rs2::calibration_change_device& self, std::function<void(rs2_calibration_status)> callback)
@@ -265,7 +270,7 @@ void init_device(py::module &m) {
             },
             "Register (only once!) a callback that gets called for each change in calibration", "callback"_a);
 
-    py::class_<rs2::debug_protocol> debug_protocol(m, "debug_protocol"); // No docstring in C++
+    py::class_<rs2::debug_protocol, py_holder<rs2::debug_protocol>> debug_protocol(m, "debug_protocol"); // No docstring in C++
     debug_protocol.def(py::init<rs2::device>())
         .def("build_command", &rs2::debug_protocol::build_command, "opcode"_a, "param1"_a = 0, 
             "param2"_a = 0, "param3"_a = 0, "param4"_a = 0, "data"_a = std::vector<uint8_t>()) 
