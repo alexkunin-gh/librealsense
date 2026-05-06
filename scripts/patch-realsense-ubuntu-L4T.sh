@@ -238,7 +238,7 @@ else
 	echo -e "\e[32mCompiling hid support, accelerometer and gyro modules\e[0m"
 	make -j$(($(nproc)-1)) M=drivers/hid modules
 	if [[ -n ${KBUILD_EXTRA_SYMBOLS} ]]; then
-		grep -w drivers/hid ${KBUILD_EXTRA_SYMBOLS} || KBUILD_EXTRA_SYMBOLS+=" drivers/hid/Module.symvers"
+		grep -w drivers/hid/hid-sensor-hub ${KBUILD_EXTRA_SYMBOLS} || KBUILD_EXTRA_SYMBOLS+=" drivers/hid/Module.symvers"
 	fi
 	make -j$(($(nproc)-1)) M=drivers/iio modules
 fi
