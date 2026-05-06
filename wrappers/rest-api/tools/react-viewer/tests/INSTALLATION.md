@@ -1,5 +1,9 @@
 # Testing Framework Installation
 
+> **Quickest path:** from `wrappers/rest-api/`, run `python run_tests.py` to execute the
+> backend pytest suite and the React viewer Vitest suite together. The steps below cover
+> the full per-tool setup and the optional Playwright E2E configuration.
+
 ## Step 1: Install Dependencies
 
 ```bash

@@ -134,12 +134,27 @@ For more details about the React viewer features and development, see `tools/rea
 
 ### Running Tests
 
-**API tests (inside tests folder):**
+The `run_tests.py` helper at the rest-api root runs both the backend pytest suite and the React viewer Vitest suite:
 
 ```bash
-pytest test_api_service.py
+# From wrappers/rest-api:
+python run_tests.py             # run both backend + frontend
+python run_tests.py --backend   # backend pytest only
+python run_tests.py --frontend  # react-viewer Vitest only
 ```
 
+You can also run each suite directly:
+
+```bash
+# Backend (FastAPI / pytest)
+pytest tests/
+
+# Frontend (React viewer / Vitest)
+cd tools/react-viewer && npm test
+```
+
+For React viewer end-to-end Playwright tests and full setup details, see
+[`tools/react-viewer/tests/INSTALLATION.md`](tools/react-viewer/tests/INSTALLATION.md).
 
 ## Advanced Testing
 
