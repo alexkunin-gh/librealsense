@@ -152,6 +152,8 @@ sudo make install
 
 All flags are defined in `CMake/lrs_options.cmake`.
 
+> **Rule:** When adding a new CMake build flag, always declare it with `option()` in `CMake/lrs_options.cmake` — never inline in a subdirectory `CMakeLists.txt`. This keeps all flags discoverable in one place and ensures they appear in `cmake-gui`/`ccmake` regardless of which subdirectory is being configured.
+
 | Flag | Default | Description |
 |---|---|---|
 | `BUILD_SHARED_LIBS` | ON | Build as shared library (`OFF` for static) |
