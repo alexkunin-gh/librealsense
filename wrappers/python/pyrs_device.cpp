@@ -101,14 +101,14 @@ void init_device(py::module &m) {
         .def("create_flash_backup", (std::vector<uint8_t>(rs2::updatable::*)() const) &rs2::updatable::create_flash_backup,
              "Create backup of camera flash memory. Such backup does not constitute valid firmware image, and cannot be "
              "loaded back to the device, but it does contain all calibration and device information.", py::call_guard<py::gil_scoped_release>())
-        .def("create_flash_backup", [](rs2::updatable& self, std::function<void(float)> f) { return self.create_flash_backup(f); },
+        .def("create_flash_backup", [](rs2::updatable& self, std::function<void(float)> f) { return self.create_flash_backup(std::move(f)); },
              "Create backup of camera flash memory. Such backup does not constitute valid firmware image, and cannot be "
              "loaded back to the device, but it does contain all calibration and device information.",
              "callback"_a, py::call_guard<py::gil_scoped_release>())
         .def("update_unsigned", (void(rs2::updatable::*)(const std::vector<uint8_t>&, int) const) &rs2::updatable::update_unsigned,
              "Update an updatable device to the provided unsigned firmware. This call is executed on the caller's thread.", "fw_image"_a,
              "update_mode"_a = RS2_UNSIGNED_UPDATE_MODE_UPDATE, py::call_guard<py::gil_scoped_release>())
-        .def("update_unsigned", [](rs2::updatable& self, const std::vector<uint8_t>& fw_image, std::function<void(float)> f, int update_mode) { return self.update_unsigned(fw_image, f, update_mode); },
+        .def("update_unsigned", [](rs2::updatable& self, const std::vector<uint8_t>& fw_image, std::function<void(float)> f, int update_mode) { return self.update_unsigned(fw_image, std::move(f), update_mode); },
              "Update an updatable device to the provided unsigned firmware. This call is executed on the caller's thread and provides progress notifications via the callback.",
              "fw_image"_a, "callback"_a, "update_mode"_a = RS2_UNSIGNED_UPDATE_MODE_UPDATE, py::call_guard<py::gil_scoped_release>())
         .def("check_firmware_compatibility", &rs2::updatable::check_firmware_compatibility, "Check firmware compatibility with device. "
@@ -118,7 +118,7 @@ void init_device(py::module &m) {
     update_device.def(py::init<rs2::device>())
         .def("update", [](rs2::update_device& self, const std::vector<uint8_t>& fw_image) { return self.update(fw_image); },
              "Update an updatable device to the provided firmware. This call is executed on the caller's thread.", "fw_image"_a, py::call_guard<py::gil_scoped_release>())
-        .def("update", [](rs2::update_device& self, const std::vector<uint8_t>& fw_image, std::function<void(float)> f) { return self.update(fw_image, f); },
+        .def("update", [](rs2::update_device& self, const std::vector<uint8_t>& fw_image, std::function<void(float)> f) { return self.update(fw_image, std::move(f)); },
              "Update an updatable device to the provided firmware. This call is executed on the caller's thread and provides progress notifications via the callback.",
              "fw_image"_a, "callback"_a, py::call_guard<py::gil_scoped_release>());
 
@@ -134,7 +134,7 @@ void init_device(py::module &m) {
         .def("run_on_chip_calibration", [](rs2::auto_calibrated_device& self, std::string json_content, std::function<void(float)> f, int timeout_ms)
         {
             float health;
-            rs2::calibration_table table = self.run_on_chip_calibration(json_content, &health, f, timeout_ms);
+            rs2::calibration_table table = self.run_on_chip_calibration(json_content, &health, std::move(f), timeout_ms);
             return std::make_tuple(table, std::make_tuple(health, 0.0));
         },"This will improve the depth noise (plane fit RMS). This call is executed on the caller's thread and provides progress notifications via the callback.", "json_content"_a, "callback"_a, "timeout_ms"_a, py::call_guard<py::gil_scoped_release>())
         .def("run_tare_calibration", [](const rs2::auto_calibrated_device& self, float ground_truth_mm, std::string json_content, int timeout_ms)
@@ -146,7 +146,7 @@ void init_device(py::module &m) {
         .def("run_tare_calibration", [](const rs2::auto_calibrated_device& self, float ground_truth_mm, std::string json_content, std::function<void(float)> callback, int timeout_ms)
         {
             float health[] = { 0,0 };
-            rs2::calibration_table table = self.run_tare_calibration(ground_truth_mm, json_content, health, callback, timeout_ms);
+            rs2::calibration_table table = self.run_tare_calibration(ground_truth_mm, json_content, health, std::move(callback), timeout_ms);
             return std::make_tuple(table, std::make_tuple(health[0], health[1]));
         }, "This will adjust camera absolute distance to flat target. This call is executed on the caller's thread and it supports progress notifications via the callback.", "ground_truth_mm"_a, "json_content"_a, "callback"_a, "timeout_ms"_a, py::call_guard<py::gil_scoped_release>())
         .def("process_calibration_frame", [](const rs2::auto_calibrated_device& self, rs2::frame frame, int timeout_ms)
@@ -158,7 +158,7 @@ void init_device(py::module &m) {
         .def("process_calibration_frame", [](const rs2::auto_calibrated_device& self, rs2::frame frame, std::function<void(float)> callback, int timeout_ms)
             {
             float health[] = { 0,0 };
-            rs2::calibration_table table = self.process_calibration_frame(frame, health, callback, timeout_ms);
+            rs2::calibration_table table = self.process_calibration_frame(frame, health, std::move(callback), timeout_ms);
             return std::make_tuple(table, std::make_tuple(health[0], health[1]));
             }, "This will add a frame to the calibration process initiated by run_tare_calibration or run_on_chip_calibration as host assistant process. This call is executed on the caller's thread and it supports progress notifications via the callback.", "frame"_a, "callback"_a, "timeout_ms"_a, py::call_guard<py::gil_scoped_release>())
         .def("run_focal_length_calibration", [](const rs2::auto_calibrated_device& self, rs2::frame_queue left_queue, rs2::frame_queue right_queue,
@@ -177,7 +177,7 @@ void init_device(py::module &m) {
                 float ratio = 0.f;
                 float angle = 0.f;
             return std::make_tuple(self.run_focal_length_calibration(left_queue, right_queue, target_width_mm, target_heigth_mm, adjust_both_sides,
-                &ratio, &angle, callback), ratio, angle);
+                &ratio, &angle, std::move(callback)), ratio, angle);
         }, "Run target-based focal length calibration. This call is executed on the caller's thread and provides progress notifications via the callback.",
             "left_queue"_a, "right_queue"_a, "target_width_mm"_a, "target_heigth_mm"_a, "adjust_both_sides"_a, "callback"_a, py::call_guard<py::gil_scoped_release>())
         .def("run_uv_map_calibration", [](const rs2::auto_calibrated_device& self, rs2::frame_queue left, rs2::frame_queue color, rs2::frame_queue depth,
@@ -193,7 +193,7 @@ void init_device(py::module &m) {
             {
                 constexpr int health_check_params = 4; // px, py, fx, fy for the calibration
                 float health[health_check_params];
-                return std::make_tuple(self.run_uv_map_calibration(left, color, depth, py_px_only, health, health_check_params, callback), health);
+                return std::make_tuple(self.run_uv_map_calibration(left, color, depth, py_px_only, health, health_check_params, std::move(callback)), health);
             }, "Run target-based Depth-RGB UV-map calibraion. This call is executed on the caller's thread and provides progress notifications via the callback.",
             "left"_a, "color"_a, "depth"_a, "py_px_only"_a, "callback"_a, py::call_guard<py::gil_scoped_release>())
         .def("calculate_target_z", [](const rs2::auto_calibrated_device& self, rs2::frame_queue queue1, rs2::frame_queue queue2, rs2::frame_queue queue3,
@@ -205,7 +205,7 @@ void init_device(py::module &m) {
         .def("calculate_target_z", [](const rs2::auto_calibrated_device& self, rs2::frame_queue queue1, rs2::frame_queue queue2, rs2::frame_queue queue3,
             float target_width_mm, float target_height_mm, std::function<void(float)> callback)
             {
-                return self.calculate_target_z(queue1, queue2, queue3, target_width_mm, target_height_mm, callback);
+                return self.calculate_target_z(queue1, queue2, queue3, target_width_mm, target_height_mm, std::move(callback));
             }, "Calculate Z for calibration target - distance to the target's plane. This call is executed on the caller's thread and provides progress notifications via the callback.",
             "queue1"_a, "queue2"_a, "queue3"_a, "target_width_mm"_a, "target_height_mm"_a, "callback"_a, py::call_guard<py::gil_scoped_release>())
         .def("get_calibration_table", &rs2::auto_calibrated_device::get_calibration_table, "Read current calibration table from flash.")
@@ -226,8 +226,8 @@ void init_device(py::module &m) {
         .def( "register_calibration_change_callback",
             []( rs2::device_calibration& self, std::function<void( rs2_calibration_status )> callback )
             {
-                self.register_calibration_change_callback( 
-                    [callback]( rs2_calibration_status status )
+                self.register_calibration_change_callback(
+                    [callback = std::move(callback)]( rs2_calibration_status status )
                     {
                         try
                         {
@@ -252,7 +252,7 @@ void init_device(py::module &m) {
             [](rs2::calibration_change_device& self, std::function<void(rs2_calibration_status)> callback)
             {
                 self.register_calibration_change_callback(
-                    [callback](rs2_calibration_status status)
+                    [callback = std::move(callback)](rs2_calibration_status status)
                     {
                         try
                         {

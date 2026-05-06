@@ -30,8 +30,8 @@ void init_context(py::module &m) {
         .def_property_readonly("sensors", &rs2::context::query_all_sensors, "A flat list of "
                                "all available sensors from all RealSense devices. Identical to calling query_all_sensors.")
         .def("get_sensor_parent", &rs2::context::get_sensor_parent, "s"_a) // no docstring in C++
-        .def("set_devices_changed_callback", [](rs2::context& self, std::function<void(rs2::event_information)> &callback) {
-            self.set_devices_changed_callback(callback);
+        .def("set_devices_changed_callback", [](rs2::context& self, std::function<void(rs2::event_information)> callback) {
+            self.set_devices_changed_callback(std::move(callback));
         }, "Register devices changed callback.", "callback"_a, py::call_guard<py::gil_scoped_release>())
         .def("load_device", &rs2::context::load_device, "Creates a devices from a RealSense file.\n"
              "On successful load, the device will be appended to the context and a devices_changed event triggered.",

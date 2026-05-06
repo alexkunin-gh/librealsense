@@ -50,14 +50,14 @@ void init_sensor(py::module &m) {
         .def("get_info", &rs2::sensor::get_info, "Retrieve camera specific information, "
              "like versions of various internal components.", "info"_a)
         .def("set_notifications_callback", [](const rs2::sensor& self, std::function<void(rs2::notification)> callback) {
-            self.set_notifications_callback(callback);
+            self.set_notifications_callback(std::move(callback));
         }, "Register Notifications callback", "callback"_a, py::call_guard<py::gil_scoped_release>())
         .def("open", (void (rs2::sensor::*)(const std::vector<rs2::stream_profile>&) const) &rs2::sensor::open,
              "Open sensor for exclusive access, by committing to a composite configuration, specifying one or "
              "more stream profiles.", "profiles"_a, py::call_guard<py::gil_scoped_release>())
         .def("close", &rs2::sensor::close, "Close sensor for exclusive access.", py::call_guard<py::gil_scoped_release>())
         .def("start", [](const rs2::sensor& self, std::function<void(rs2::frame)> callback) {
-            self.start(callback);
+            self.start(std::move(callback));
         }, "Start passing frames into user provided callback.", "callback"_a,py::call_guard< py::gil_scoped_release >())
         .def("start", [](const rs2::sensor& self, rs2::syncer& syncer) {
             self.start(syncer);
