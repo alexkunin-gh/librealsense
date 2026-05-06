@@ -30,7 +30,7 @@ describe('API Client', () => {
       const device = devices.find((d: any) => d.device_id === mockDevice.device_id)
       
       expect(device).toBeDefined()
-      expect(device.name).toBe('Intel RealSense D435')
+      expect(device.name).toBe('RealSense D435')
       expect(device.serial_number).toBe('123456789')
       expect(device.firmware_version).toBe('5.16.0.1')
     })

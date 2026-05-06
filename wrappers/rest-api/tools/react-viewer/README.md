@@ -14,7 +14,7 @@ A modern React-based web UI for Intel RealSense cameras, leveraging the REST API
 ## Prerequisites
 
 - Node.js 18+ and npm
-- RealSense REST API server running (see `../rest-api`)
+- RealSense REST API server running (see `../../`)
 
 ## Quick Start
 
@@ -24,19 +24,25 @@ A modern React-based web UI for Intel RealSense cameras, leveraging the REST API
    npm install
    ```
 
-2. **Start the REST API server** (in another terminal):
+2. **(Optional) Configure environment variables:**
+   Copy `.env.example` to `.env` and fill in your AI chat provider key (Groq / OpenAI) and optional backend URL.
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Start the REST API server** (in another terminal):
    ```bash
    cd wrappers/rest-api
    pip install -r requirements.txt
    python main.py
    ```
 
-3. **Start the development server:**
+4. **Start the development server:**
    ```bash
    npm run dev
    ```
 
-4. **Open in browser:**
+5. **Open in browser:**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
 ## Project Structure

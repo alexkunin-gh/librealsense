@@ -3,7 +3,7 @@ import { mockSensors } from './sensors'
 
 export const mockDevice: DeviceInfo = {
   device_id: '123456789',
-  name: 'Intel RealSense D435',
+  name: 'RealSense D435',
   serial_number: '123456789',
   firmware_version: '5.16.0.1',
   recommended_firmware_version: '5.16.0.1',
@@ -18,7 +18,7 @@ export const mockDevice: DeviceInfo = {
 
 export const mockDevice2: DeviceInfo = {
   device_id: '987654321',
-  name: 'Intel RealSense D455',
+  name: 'RealSense D455',
   serial_number: '987654321',
   firmware_version: '5.15.0.0',
   recommended_firmware_version: '5.16.0.1',

@@ -1,3 +1,6 @@
+# License: Apache 2.0. See LICENSE file in root directory.
+# Copyright(c) 2026 RealSense, Inc. All Rights Reserved.
+
 import asyncio
 import threading
 import time
@@ -1597,6 +1600,8 @@ class RealSenseManager:
                                 if len(queue) > 0:
                                     return queue[-1]
                                 else:
+                                    # 503 Service Unavailable: stream is active but no frames yet
+                                    # (transient — caller should retry rather than treat as fatal)
                                     raise RealSenseError(
                                         status_code=503,
                                         detail=f"No frames available for stream {stream_type}",
@@ -2619,6 +2624,8 @@ class RealSenseManager:
             
             queue = self.sensor_frame_queues[device_id][sensor_id]
             if len(queue) == 0:
+                # 503 Service Unavailable: sensor is streaming but no frames yet
+                # (transient — caller should retry rather than treat as fatal)
                 raise RealSenseError(
                     status_code=503,
                     detail=f"No frames available for sensor {sensor_id}"
@@ -2654,5 +2661,3 @@ class RealSenseManager:
                 return {}
             
             return queue[-1]
-
-

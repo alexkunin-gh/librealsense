@@ -32,7 +32,7 @@ export function resetStore() {
 export function createMockDevice(overrides: Partial<DeviceInfo> = {}): DeviceInfo {
   return {
     device_id: 'test-device-1',
-    name: 'Intel RealSense D435',
+    name: 'RealSense D435',
     serial_number: '123456789',
     firmware_version: '5.16.0.1',
     usb_type: '3.2',

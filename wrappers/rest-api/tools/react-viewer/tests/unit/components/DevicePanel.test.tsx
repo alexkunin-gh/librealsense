@@ -79,7 +79,7 @@ describe('DevicePanel', () => {
         },
       })
       
-      expect(screen.getByText('Intel RealSense D435')).toBeInTheDocument()
+      expect(screen.getByText('RealSense D435')).toBeInTheDocument()
     })
 
     it('shows multiple devices when connected', () => {
@@ -196,7 +196,7 @@ describe('DevicePanel', () => {
       })
       
       // Device should show but not be active
-      expect(screen.getByText('Intel RealSense D435')).toBeInTheDocument()
+      expect(screen.getByText('RealSense D435')).toBeInTheDocument()
     })
 
     it('shows device as active when deviceState.isActive is true', () => {
@@ -212,7 +212,7 @@ describe('DevicePanel', () => {
       
       // When active, the device card should have active styling
       // The exact check depends on component implementation
-      expect(screen.getByText('Intel RealSense D435')).toBeInTheDocument()
+      expect(screen.getByText('RealSense D435')).toBeInTheDocument()
     })
   })
 

@@ -1,3 +1,6 @@
+# License: Apache 2.0. See LICENSE file in root directory.
+# Copyright(c) 2026 RealSense, Inc. All Rights Reserved.
+
 """
 Mock implementation of pyrealsense2 for testing purposes.
 This mock implements all the classes and functions used in rs_manager.py.
