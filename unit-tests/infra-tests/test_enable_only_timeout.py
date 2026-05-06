@@ -2,13 +2,19 @@
 # Copyright(c) 2026 RealSense, Inc. All Rights Reserved.
 
 """
-Tests that devices.enable_only() raises TimeoutError when the hub recycle
-fails to bring the requested serial back online (i.e. _wait_for returns False).
+Tests that devices.enable_only() raises when it cannot bring the requested
+serials online, instead of silently returning. Covers all three branches:
 
-Before this behavior existed, enable_only would silently swallow the timeout
-and the test fixture would proceed with a non-existent device, surfacing
-later as confusing IndexError / "list index out of range" failures inside
-the test body.
+- hub + recycle: TimeoutError when _wait_for times out
+- no-hub + no-recycle: TimeoutError when _wait_for times out
+- no-hub + recycle: RuntimeError when hw_reset fails (the False return
+  there can mean hardware_reset() raised, devices didn't disappear, or
+  devices didn't reappear — so "timeout" doesn't accurately describe it)
+
+Before this behavior existed, enable_only would silently swallow these
+failures and the test fixture would proceed with a non-existent device,
+surfacing later as confusing IndexError / "list index out of range"
+failures inside the test body.
 """
 
 import types

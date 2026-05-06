@@ -614,7 +614,7 @@ class TestRealSenseAPIIntegration:
 
         # First get devices
         response = real_client.get("/api/devices")
-
+        assert response.status_code == 200, f"/api/devices returned {response.status_code}: {response.text}"
 
         devices = response.json()
         assert devices, "/api/devices returned no devices — hub/USB enumeration likely failed"
@@ -651,7 +651,7 @@ class TestRealSenseAPIIntegration:
 
         # First get devices
         response = real_client.get("/api/devices")
-
+        assert response.status_code == 200, f"/api/devices returned {response.status_code}: {response.text}"
 
         devices = response.json()
         assert devices, "/api/devices returned no devices — hub/USB enumeration likely failed"
