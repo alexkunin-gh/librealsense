@@ -1,5 +1,5 @@
 # License: Apache 2.0. See LICENSE file in root directory.
-# Copyright(c) 2024 RealSense, Inc. All Rights Reserved.
+# Copyright(c) 2026 RealSense, Inc. All Rights Reserved.
 
 # Currently testing with D585S because this is the only module supporting some of the features like module verbosity and version verification.
 # When more D500 models will be available most of the test cases can be generelized, but D585S version verification should still be checked specifically.

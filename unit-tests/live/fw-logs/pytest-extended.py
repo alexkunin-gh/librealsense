@@ -112,7 +112,9 @@ def test_load_supported_definitions_file(fw_logger):
         definitions = f.read()
     logger.init_parser( definitions )
     logger.start_collecting()
-    logger.get_firmware_log( raw_message ) # Get a log entry from the camera with unknown content
-    logger.parse_log( raw_message, parsed_message )
-    log.debug( 'Parsed message: %s', parsed_message.get_message() )
-    logger.stop_collecting()
+    try:
+        logger.get_firmware_log( raw_message ) # Get a log entry from the camera with unknown content
+        logger.parse_log( raw_message, parsed_message )
+        log.debug( 'Parsed message: %s', parsed_message.get_message() )
+    finally:
+        logger.stop_collecting()
