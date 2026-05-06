@@ -448,6 +448,7 @@ class TestRealSenseAPIIntegration:
 
         # Create a real RealSenseManager (not mocked)
         manager = RealSenseManager(sio)
+        assert manager.get_devices(), "RealSenseManager sees no devices — hub/USB enumeration likely failed"
         return manager
 
     def test_get_device_rs(self, real_rs_manager):
@@ -613,9 +614,10 @@ class TestRealSenseAPIIntegration:
 
         # First get devices
         response = real_client.get("/api/devices")
-
+        assert response.status_code == 200, f"/api/devices returned {response.status_code}: {response.text}"
 
         devices = response.json()
+        assert devices, "/api/devices returned no devices — hub/USB enumeration likely failed"
         device_id = devices[0]["device_id"]
 
         # Test sensors endpoint
@@ -649,9 +651,10 @@ class TestRealSenseAPIIntegration:
 
         # First get devices
         response = real_client.get("/api/devices")
-
+        assert response.status_code == 200, f"/api/devices returned {response.status_code}: {response.text}"
 
         devices = response.json()
+        assert devices, "/api/devices returned no devices — hub/USB enumeration likely failed"
 
         device_id = devices[0]["device_id"]
 
