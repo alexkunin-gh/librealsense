@@ -617,7 +617,14 @@ def enable_only( serial_numbers, recycle = False, timeout = MAX_ENUMERATION_TIME
                        'disabling currently enabled ports', enabled_ports )
                 sns_to_remove = { sn for sn in enabled() if get( sn ).port in enabled_ports }
                 hub.disable_ports( enabled_ports )
+                disable_t = time.time()
                 _wait_until_removed( sns_to_remove, timeout = timeout )
+                # Acroname USBHub3p firmware (2.12.2) wedges with -71 cascades when
+                # disable->enable runs faster than ~2 s on high-load devices like D585S.
+                # _wait_until_removed often returns in <1 s, so enforce the gap here.
+                settle = 2.0 - (time.time() - disable_t)
+                if settle > 0:
+                    time.sleep( settle )
             #
             if wanted_ports:
                 hub.enable_ports( wanted_ports )
