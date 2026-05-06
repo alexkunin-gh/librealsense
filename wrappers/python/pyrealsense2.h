@@ -32,7 +32,7 @@ struct gil_releasing_deleter
 template < typename T >
 using py_holder = std::unique_ptr< T, gil_releasing_deleter< T > >;
 
-PYBIND11_DECLARE_HOLDER_TYPE( T, py_holder< T > );
+PYBIND11_DECLARE_HOLDER_TYPE( T, py_holder< T > )
 
 // For rs2_format
 #include "../include/librealsense2/h/rs_sensor.h"
