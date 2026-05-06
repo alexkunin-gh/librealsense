@@ -47,15 +47,6 @@ cmake --build . --config Release --parallel --target realsense2
 
 # Build only the viewer
 cmake --build . --config Release --parallel --target realsense-viewer
-
-# Build only examples
-cmake --build . --config Release --parallel --target examples
-```
-
-### List Available Targets
-
-```powershell
-cmake --build . --target help
 ```
 
 ### Install
@@ -90,9 +81,6 @@ make realsense2
 
 # Build only the viewer
 make realsense-viewer
-
-# Build only examples
-make examples
 ```
 
 ### List Available Targets
@@ -135,9 +123,6 @@ make realsense2
 
 # Build only the viewer
 make realsense-viewer
-
-# Build only examples
-make examples
 ```
 
 ### List Available Targets
@@ -159,10 +144,8 @@ sudo make install
 |---|---|
 | `realsense2` | Core library only |
 | `realsense-viewer` | Viewer application |
-| `examples` | All examples |
 | `rs-enumerate-devices` | Device enumeration tool |
 | `rs-fw-update` | Firmware update tool |
-| `unit-tests` | Test executables |
 | `pyrealsense2` | Python bindings |
 
 ## Common CMake Build Flags
