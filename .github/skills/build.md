@@ -20,48 +20,150 @@
 | **Raspberry Pi** | GCC (ARM) | See `doc/installation_raspbian.md` |
 | **Android** | NDK (r20b+) | Cross-compilation; see `doc/android.md` |
 
-## Basic Build (All Platforms)
-
-```bash
-mkdir build && cd build
-cmake ..
-cmake --build . --config Release
-```
-
 ## Windows Build (Visual Studio)
+
+### Full Build
 
 ```powershell
 mkdir build; cd build
 cmake .. -G "Visual Studio 17 2022" -A x64
-cmake --build . --config Release
+cmake --build . --config Release --parallel
 # Or open build/realsense2.sln in Visual Studio
 ```
 
-To install:
+**Note**: Always use `--parallel` flag on Windows for faster parallel builds.
+
+### Build Specific Target
+
+To build only a specific target:
 ```powershell
-cmake --build . --config Release --target install
+cmake --build . --config Release --parallel --target <target-name>
+```
+
+Examples:
+```powershell
+# Build only the core library
+cmake --build . --config Release --parallel --target realsense2
+
+# Build only the viewer
+cmake --build . --config Release --parallel --target realsense-viewer
+
+# Build only examples
+cmake --build . --config Release --parallel --target examples
+```
+
+### List Available Targets
+
+```powershell
+cmake --build . --target help
+```
+
+### Install
+
+```powershell
+cmake --build . --config Release --parallel --target install
 ```
 
 ## Linux Build
+
+### Full Build
 
 ```bash
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
+```
+
+### Build Specific Target
+
+To build only a specific target:
+```bash
+make <target-name>
+# Or with cmake:
+cmake --build . --target <target-name>
+```
+
+Examples:
+```bash
+# Build only the core library
+make realsense2
+
+# Build only the viewer
+make realsense-viewer
+
+# Build only examples
+make examples
+```
+
+### List Available Targets
+
+```bash
+make help
+```
+
+### Install
+
+```bash
 sudo make install
 ```
 
 ## macOS Build
 
+**Note**: macOS requires `FORCE_RSUSB_BACKEND=ON`.
+
+### Full Build
+
 ```bash
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DFORCE_RSUSB_BACKEND=ON
 make -j$(sysctl -n hw.ncpu)
+```
+
+### Build Specific Target
+
+To build only a specific target:
+```bash
+make <target-name>
+# Or with cmake:
+cmake --build . --target <target-name>
+```
+
+Examples:
+```bash
+# Build only the core library
+make realsense2
+
+# Build only the viewer
+make realsense-viewer
+
+# Build only examples
+make examples
+```
+
+### List Available Targets
+
+```bash
+make help
+```
+
+### Install
+
+```bash
 sudo make install
 ```
 
-Note: macOS requires `FORCE_RSUSB_BACKEND=ON`.
 
+## Common Target Reference
+
+| Target | Description |
+|---|---|
+| `realsense2` | Core library only |
+| `realsense-viewer` | Viewer application |
+| `examples` | All examples |
+| `rs-enumerate-devices` | Device enumeration tool |
+| `rs-fw-update` | Firmware update tool |
+| `unit-tests` | Test executables |
+| `pyrealsense2` | Python bindings |
 
 ## Common CMake Build Flags
 
@@ -97,6 +199,11 @@ cmake .. -DCMAKE_BUILD_TYPE=Release \
          -DBUILD_PYTHON_BINDINGS=ON \
          -DBUILD_UNIT_TESTS=ON
 cmake --build . --config Release
+```
+
+**On Windows**, always add `--parallel`:
+```powershell
+cmake --build . --config Release --parallel
 ```
 
 ## Example: Build with DDS Support
