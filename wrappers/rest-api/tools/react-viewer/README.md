@@ -18,38 +18,48 @@ A modern React-based web UI for Intel RealSense cameras, leveraging the REST API
 
 ## Quick Start
 
-1. **Install dependencies:**
-   ```bash
-   cd wrappers/rest-api/tools/react-viewer
-   npm install
-   ```
-   if npm not installed, run before previous command:
-   ```bash
-   sudo apt install npm
-   ```
+You need **two terminals** running in parallel — one for the backend (FastAPI) and one
+for the frontend (Vite dev server). Each terminal has a one-time install step followed
+by a long-running server. The install steps below assume you start from the repo root.
 
-2. **(Optional) Configure environment variables:**
-   Copy `.env.example` to `.env` and fill in your AI chat provider key (Groq / OpenAI) and optional backend URL.
-   ```bash
-   cp .env.example .env
-   ```
+### Terminal 1 — Backend (REST API)
 
-3. **Start the REST API server** (in another terminal):
-   ```bash
-   cd wrappers/rest-api
-   python3 install.py
-   python main.py
-   ```
-   `install.py` installs the requirements and, if needed, also pulls
-   `pyrealsense2` from PyPI (skipped if you already have it installed).
+```bash
+cd wrappers/rest-api
+python3 install.py    # one-time: installs requirements (and pyrealsense2 if missing)
+python3 main.py       # long-running: serves the API on http://localhost:8000
+```
 
-4. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
+`install.py` installs the packages from `requirements.txt` and, if `pyrealsense2` is
+not already importable, also pulls it from PyPI (skipped if you already have it
+installed locally — built from source, apt, or pip).
 
-5. **Open in browser:**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+### Terminal 2 — Frontend (React viewer)
+
+```bash
+cd wrappers/rest-api/tools/react-viewer
+npm install           # one-time: installs Node dependencies
+npm run dev           # long-running: serves the UI on http://localhost:3000
+```
+
+If `npm` is not installed:
+```bash
+sudo apt install npm
+```
+
+### (Optional) Configure environment variables
+
+Before starting the dev server, copy `.env.example` to `.env` and fill in your AI chat
+provider key (Groq / OpenAI) and optional backend URL:
+```bash
+cp .env.example .env
+```
+
+### Open in browser
+
+Once both terminals are up (backend on `:8000`, frontend on `:3000`), navigate to
+[http://localhost:3000](http://localhost:3000). The frontend proxies API calls to the
+backend automatically.
 
 ## Project Structure
 
