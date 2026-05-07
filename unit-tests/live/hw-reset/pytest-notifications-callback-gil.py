@@ -1,37 +1,10 @@
 # License: Apache 2.0. See LICENSE file in root directory.
 # Copyright(c) 2026 RealSense, Inc. All Rights Reserved.
 
-# Regression test for LRS-1040: pyrealsense2 GIL deadlock during a
-# hardware_reset loop with a notifications callback registered.
-#
-# Two related deadlocks are guarded:
-#
-#  1) sensor.set_notifications_callback() with a notification in flight.
-#     Pre-fix, the binding held the GIL while calling
-#     notifications_processor::set_callback() -> dispatcher::stop(), which
-#     blocked on _dispatch_mutex held by the dispatcher's worker thread; the
-#     worker was inside a Python notification_cb that had released the GIL via
-#     time.sleep() and needed it back to return. Both threads waiting on a
-#     lock held by the other.
-#
-#  2) Cascading C++ destruction triggered by a Python ref drop (e.g.
-#     `p = rs.debug_protocol(current_dev)` reassigning, dropping the previous
-#     device's last Python ref). The Python tp_dealloc held the GIL, the
-#     destructor cascade hit ~notifications_processor() -> dispatcher::stop(),
-#     and the same circular wait fired.
-#
-# Both are forced deterministically here: a background thread injects Motion
-# Module force-pause errors via HWM opcode 0x4D / id 9 at a high cadence so a
-# notification is virtually always in flight, and the main loop calls
-# set_notifications_callback synchronised with a threading.Event from inside
-# the callback.
-#
-# Why a child process: pytest-timeout and in-process faulthandler watchdogs
-# can't break a true GIL deadlock -- their watchdog threads need the GIL too.
-# The deadlock-prone work runs in a child process; the parent waits with
-# subprocess.Popen.wait(timeout=...) which is a kernel-level wait unaffected
-# by the child's GIL state. On hang the parent calls terminate() on the child
-# and fails the test, leaving the rest of the pytest queue unaffected.
+# Python wrapper deadlock regression test. See LRS-1040
+# The test loops hardware_reset while a background thread injects FW errors, and on each
+# iteration re-registers set_notifications_callback while a notification is in flight.
+# Runs in a subprocess so a GIL deadlock can be killed instead of hanging pytest.
 
 import os
 import sys
