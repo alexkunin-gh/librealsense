@@ -1,12 +1,18 @@
 # License: Apache 2.0. See LICENSE file in root directory.
-# Copyright(c) 2025 RealSense, Inc. All Rights Reserved.
+# Copyright(c) 2026 RealSense, Inc. All Rights Reserved.
 
-#test:device:jetson D457
-#test:device:!jetson D455
+import logging
 
-import pyrealsense2 as rs
-from rspy import test, log
-from hdr_helper import load_and_perform_test
+import pytest
+from rspy.pytest.device_helpers import is_jetson_platform
+
+import hdr_helper
+
+log = logging.getLogger(__name__)
+
+pytestmark = [
+    pytest.mark.device("D457" if is_jetson_platform() else "D455"),
+]
 
 MANUAL_HDR_CONFIG = {
     "hdr-preset": {
@@ -37,8 +43,12 @@ AUTO_HDR_CONFIG = {
     }
 }
 
-load_and_perform_test(MANUAL_HDR_CONFIG, "Auto HDR - Sanity - Manual mode")
 
-load_and_perform_test(AUTO_HDR_CONFIG, "Auto HDR - Sanity - Auto mode")
+def test_hdr_preset_manual(test_device):
+    hdr_helper.setup_for_device(test_device)
+    hdr_helper.load_and_perform_test(MANUAL_HDR_CONFIG, "Auto HDR - Sanity - Manual mode")
 
-test.print_results_and_exit()
+
+def test_hdr_preset_auto(test_device):
+    hdr_helper.setup_for_device(test_device)
+    hdr_helper.load_and_perform_test(AUTO_HDR_CONFIG, "Auto HDR - Sanity - Auto mode")
