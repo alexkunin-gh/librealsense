@@ -3,12 +3,12 @@
 
 import json
 import logging
+import threading
 import time
 
 import pytest
 import pyrealsense2 as rs
 from pytest_check import check
-from rspy.pytest.device_helpers import is_jetson_platform
 
 import hdr_helper
 from hdr_helper import HDR_CONFIGURATIONS
@@ -16,7 +16,7 @@ from hdr_helper import HDR_CONFIGURATIONS
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.device("D457" if is_jetson_platform() else "D455"),
+    pytest.mark.device("D400*"),
     pytest.mark.context("nightly"),
 ]
 
@@ -30,12 +30,33 @@ class FrameCounter:
     def __init__(self):
         self.count = 0
         self.counting = False
+        self._lock = threading.Lock()
 
     def callback(self, frame):
-        if not self.counting:
-            return  # Skip counting if not enabled
-        self.count += 1
+        # Runs on librealsense's sensor callback thread, while counting/count are
+        # mutated from the main test thread — guard with a lock.
+        with self._lock:
+            if not self.counting:
+                return
+            self.count += 1
         log.debug("Frame callback called, frame number: %s", frame.get_frame_number())
+
+    def reset(self):
+        with self._lock:
+            self.count = 0
+            self.counting = False
+
+    def start(self):
+        with self._lock:
+            self.counting = True
+
+    def stop(self):
+        with self._lock:
+            self.counting = False
+
+    def get_count(self):
+        with self._lock:
+            return self.count
 
 
 def test_hdr_performance(test_device):
@@ -53,19 +74,20 @@ def test_hdr_performance(test_device):
         test_name = f"Config {i + 1} ({config_type}, {num_items} items)"
         hdr_helper.test_json_load(config, test_name)
 
-        counter.count = 0
+        counter.reset()
         depth_profile = next(p for p in sensor.get_stream_profiles() if p.stream_type() == rs.stream.depth)
         sensor.open(depth_profile)
         sensor.start(counter.callback)
 
         time.sleep(TIME_FOR_STEADY_STATE)
-        counter.counting = True  # Start counting frames
+        counter.start()  # Start counting frames
         time.sleep(TIME_TO_COUNT_FRAMES)
-        counter.counting = False  # Stop counting
+        counter.stop()  # Stop counting
 
         sensor.stop()
         sensor.close()
 
-        measured_fps = counter.count / TIME_TO_COUNT_FRAMES
-        log.debug("Test %s: Counted frames = %d, Measured FPS = %.2f", test_name, counter.count, measured_fps)
+        final_count = counter.get_count()
+        measured_fps = final_count / TIME_TO_COUNT_FRAMES
+        log.debug("Test %s: Counted frames = %d, Measured FPS = %.2f", test_name, final_count, measured_fps)
         check.greater(measured_fps, ACCEPTABLE_FPS, f"Measured FPS {measured_fps:.2f}")

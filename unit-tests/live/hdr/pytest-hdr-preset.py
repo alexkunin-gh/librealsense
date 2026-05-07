@@ -4,14 +4,13 @@
 import logging
 
 import pytest
-from rspy.pytest.device_helpers import is_jetson_platform
 
 import hdr_helper
 
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.device("D457" if is_jetson_platform() else "D455"),
+    pytest.mark.device("D400*"),
 ]
 
 MANUAL_HDR_CONFIG = {

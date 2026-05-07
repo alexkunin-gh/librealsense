@@ -7,7 +7,6 @@ import logging
 import pytest
 import pyrealsense2 as rs
 from pytest_check import check
-from rspy.pytest.device_helpers import is_jetson_platform
 
 import hdr_helper
 from hdr_helper import HDR_CONFIGURATIONS, MANUAL_HDR_CONFIG_1
@@ -15,7 +14,7 @@ from hdr_helper import HDR_CONFIGURATIONS, MANUAL_HDR_CONFIG_1
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.device("D457" if is_jetson_platform() else "D455"),
+    pytest.mark.device("D400*"),
     pytest.mark.context("nightly"),
 ]
 

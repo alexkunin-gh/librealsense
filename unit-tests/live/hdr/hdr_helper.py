@@ -58,11 +58,12 @@ def setup_for_device(test_device):
 
     Must be called at the start of each test that uses this helper.
     """
-    global device, ctx, am, sensor, pipe
+    global device, ctx, am, sensor, pipe, batch_size
     device, ctx = test_device
     am = rs.rs400_advanced_mode(device)
     sensor = device.first_depth_sensor()
     pipe = rs.pipeline(ctx)
+    batch_size = 0
 
 
 def to_signed(value):
@@ -76,7 +77,6 @@ def to_signed(value):
 def test_json_load(config, test_title):
     global batch_size
     log.info(test_title)
-    prior_config = json.loads(am.serialize_json())
     am.load_json(json.dumps(config))  # json dumps just stringify the object
     hdr_config_read = json.loads(am.serialize_json())  # jsonify, note this JSON contains also other keys (params)
 
