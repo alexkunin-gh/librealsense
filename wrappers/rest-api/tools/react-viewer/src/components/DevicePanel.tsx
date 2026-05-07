@@ -638,7 +638,7 @@ interface SensorStreamControlsProps {
   sensors: SensorInfo[]
   streamsBySensor: Record<string, StreamConfig[]>
   streamingMode: string
-  sensorStreamingStatus: Record<string, { is_streaming: boolean; pendingOp?: string | null; error?: string }>
+  sensorStreamingStatus: Record<string, { is_streaming: boolean; pendingOp?: string | null; error?: string | null }>
   sensorConfigs: Record<string, SensorConfig>
   onUpdateStreamConfig: (config: StreamConfig) => void
   onUpdateSensorConfig: (sensorId: string, config: Partial<SensorConfig>) => void
