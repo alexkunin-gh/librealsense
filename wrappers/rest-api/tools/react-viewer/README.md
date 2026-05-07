@@ -205,6 +205,15 @@ Both scripts produce, under the repository root:
 Prerequisites: Node.js 18+, Python 3.8+, Rust 1.56+ (https://rustup.rs/), PyInstaller
 (`pip install pyinstaller`).
 
+**Linux only — Tauri build dependencies.** The Rust bundler needs WebKitGTK and a few
+other dev headers. On Debian/Ubuntu:
+```bash
+sudo apt install -y \
+  libwebkit2gtk-4.0-dev libgtk-3-dev libsoup2.4-dev \
+  libayatana-appindicator3-dev librsvg2-dev libssl-dev \
+  pkg-config build-essential
+```
+
 For a step-by-step manual walkthrough, dev mode (`npm run tauri:dev`), code signing
 and troubleshooting, see [DESKTOP_BUILD.md](DESKTOP_BUILD.md).
 
