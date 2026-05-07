@@ -27,7 +27,7 @@ def get_known_errors_for_firmware(current_fw_version):
     known_errors = []
 
     # Motion Module failure is a known issue starting before firmware 5.17.0.12
-    if (rsutils.version(current_fw_version) < rsutils.version("5.17.0.12")):
+    if (rsutils.version(current_fw_version) < rsutils.version(5, 17, 0, 12)):
         known_errors.append("Motion Module failure")  # See also RSDSO-20645
         # Add other version-specific known errors here as needed
 
@@ -145,11 +145,11 @@ def test_firmware_error_monitoring(test_device):
 
     # Start streaming
     pipe = rs.pipeline(ctx)
-    profile = pipe.start()
-
-    log.info("Started streaming, monitoring for firmware errors for %d seconds...", STREAMING_DURATION_SECONDS)
 
     try:
+        pipe.start()
+        log.info("Started streaming, monitoring for firmware errors for %d seconds...", STREAMING_DURATION_SECONDS)
+
         stopwatch = Stopwatch()
         frame_count = 0
         last_log_time = 0
