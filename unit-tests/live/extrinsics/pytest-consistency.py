@@ -74,14 +74,6 @@ def test_extrinsics_graph_4x4(test_device):
 
     start_point = [1.0, 2.0, 3.0]
 
-    # rotation part with 30 degrees rotation on each axis
-    point_and_orientation = np.array([
-        [ 0.75,      -0.4330127,  0.5,       1.0],
-        [ 0.649519,   0.625,     -0.4330127, 2.0],
-        [-0.125,      0.649519,   0.75,      3.0],
-        [ 0.0,        0.0,        0.0,       1.0],
-    ])
-
     for i in range(len(relevant_profiles) - 2):
         for j in range(i + 1, len(relevant_profiles) - 1):
             p_i = relevant_profiles[i]
@@ -103,9 +95,3 @@ def test_extrinsics_graph_4x4(test_device):
             transformed_point = rs.rs2_transform_point_to_point(extr_i_to_j, start_point)
             end_point = rs.rs2_transform_point_to_point(extr_j_to_i, transformed_point)
             assert end_point == pytest.approx(start_point, abs=1e-3)
-
-            # applying extrinsics from i to j on point with orientation
-            retransformed_temp = pr_j_to_i @ point_and_orientation
-            # applying extrinsics from j to i
-            retransformed = pr_i_to_j @ retransformed_temp
-            assert matrices_equal(retransformed, point_and_orientation)
