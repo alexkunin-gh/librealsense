@@ -10,7 +10,8 @@ import hdr_helper
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.device("D400*"),
+    pytest.mark.device_each("D455"),
+    pytest.mark.device_each("D457"),
 ]
 
 MANUAL_HDR_CONFIG = {
