@@ -121,6 +121,7 @@ react-viewer/
 ├── DESKTOP_BUILD.md                  # Tauri build instructions
 ├── LICENSE-THIRD-PARTY.md            # Third-party JS/Rust licenses
 ├── build-all.ps1                     # One-shot Windows build (FastAPI exe + Tauri MSI/NSIS)
+├── build-all.sh                      # One-shot Linux/macOS build (FastAPI exe + Tauri .deb/AppImage/.dmg)
 ├── index.html
 ├── package.json
 ├── tsconfig.json
@@ -175,10 +176,37 @@ This opens a native desktop window with hot-reload.
 
 ### Production Build
 
-See [DESKTOP_BUILD.md](DESKTOP_BUILD.md) for detailed build instructions, including:
-- Building the FastAPI executable with PyInstaller
-- Creating platform-specific installers (.msi, .dmg, .AppImage)
-- Code signing and distribution
+A one-shot build script is provided for both Windows and Linux/macOS. It runs all
+three stages (PyInstaller → Vite → Tauri bundle) and produces platform-native
+installers.
+
+**Linux / macOS:**
+```bash
+cd wrappers/rest-api/tools/react-viewer
+chmod +x build-all.sh
+./build-all.sh             # build everything
+./build-all.sh --clean     # clean + rebuild
+```
+
+**Windows (PowerShell):**
+```powershell
+cd wrappers\rest-api\tools\react-viewer
+.\build-all.ps1            # build everything
+.\build-all.ps1 -Clean     # clean + rebuild
+```
+
+Both scripts produce, under the repository root:
+- `build/rest-api-dist/realsense_api/` - PyInstaller bundle of the FastAPI backend
+- `build/tauri-target/release/bundle/` - native installer(s):
+  - Windows: `.msi` + `.exe` (NSIS)
+  - Linux: `.deb` + `.AppImage`
+  - macOS: `.dmg`
+
+Prerequisites: Node.js 18+, Python 3.8+, Rust 1.56+ (https://rustup.rs/), PyInstaller
+(`pip install pyinstaller`).
+
+For a step-by-step manual walkthrough, dev mode (`npm run tauri:dev`), code signing
+and troubleshooting, see [DESKTOP_BUILD.md](DESKTOP_BUILD.md).
 
 ## Production Deployment
 
