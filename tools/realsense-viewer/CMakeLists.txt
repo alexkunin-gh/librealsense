@@ -197,9 +197,14 @@ endif()
 set(RS_VIEWER_LIBS ${GTK3_LIBRARIES} Threads::Threads realsense2-gl)
 
 if(BUILD_WITH_MINZ)
-    # Installed by: sudo dpkg -i rs-enhanced-depth-*.deb
-    set(MINZ_ROOT "/opt/rs-enhanced-depth" CACHE PATH
-        "Root of the rs-enhanced-depth installation (default: /opt/rs-enhanced-depth)")
+    # NOTE: librs_depth_range.so is hard-linked into the viewer binary.
+    # The librealsense2-enhanced-depth package MUST be installed on every system
+    # that runs this binary — if the library is absent the viewer will fail to start.
+    # Do not distribute a BUILD_WITH_MINZ=ON binary to systems without the package.
+    #
+    # Installed by: sudo dpkg -i librealsense2-enhanced-depth-*.deb
+    set(MINZ_ROOT "/opt/librealsense2-enhanced-depth" CACHE PATH
+        "Root of the librealsense2-enhanced-depth installation (default: /opt/librealsense2-enhanced-depth)")
 
     find_path(MINZ_INCLUDE_DIR
         NAMES rs_depth_range.hpp
@@ -220,15 +225,15 @@ if(BUILD_WITH_MINZ)
 
     if(NOT MINZ_INCLUDE_DIR)
         message(FATAL_ERROR "rs_depth_range.hpp not found under ${MINZ_ROOT}/include -- "
-            "install rs-enhanced-depth library or set MINZ_ROOT")
+            "install librealsense2-enhanced-depth library or set MINZ_ROOT")
     endif()
     if(NOT MINZ_CALIBRATION_HEADER)
         message(FATAL_ERROR "rs_depth_calibration.hpp not found under ${MINZ_ROOT}/include -- "
-            "install rs-enhanced-depth library or set MINZ_ROOT")
+            "install librealsense2-enhanced-depth library or set MINZ_ROOT")
     endif()
     if(NOT MINZ_LIBRARY)
         message(FATAL_ERROR "librs_depth_range not found under ${MINZ_ROOT}/lib -- "
-            "install rs-enhanced-depth library or set MINZ_ROOT")
+            "install librealsense2-enhanced-depth library or set MINZ_ROOT")
     endif()
 
     target_compile_definitions(${PROJECT_NAME} PRIVATE BUILD_WITH_MINZ)

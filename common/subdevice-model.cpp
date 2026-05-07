@@ -5,6 +5,26 @@
 #include "post-processing-block-model.h"
 #ifdef BUILD_WITH_MINZ
 #include "minz-filter.h"
+#include <dlfcn.h>
+
+namespace {
+// Uses dlopen so the binary runs on systems without libcuda (e.g. Raspberry Pi).
+// A hard-linked cudaGetDeviceCount would crash the loader if libcuda is absent.
+static bool cuda_available()
+{
+    static bool result = []() -> bool {
+        void * handle = dlopen( "libcuda.so.1", RTLD_LAZY );
+        if( !handle )
+            return false;
+        using cu_init_t = int (*)( unsigned int );
+        auto cu_init = reinterpret_cast< cu_init_t >( dlsym( handle, "cuInit" ) );
+        bool ok = cu_init && cu_init( 0 ) == 0;
+        dlclose( handle );
+        return ok;
+    }();
+    return result;
+}
+} // namespace
 #endif
 #include <imgui_internal.h>
 #include <realsense_imgui.h>
@@ -190,6 +210,11 @@ namespace rs2
             {
                 model->available = []() { return false; };
                 model->unavailable_tooltip = "Not supported on this camera model";
+            }
+            else if( !cuda_available() )
+            {
+                model->available = []() { return false; };
+                model->unavailable_tooltip = "MinZ requires CUDA (not detected on this system)";
             }
             else
             {

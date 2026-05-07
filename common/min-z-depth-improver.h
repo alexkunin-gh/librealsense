@@ -8,13 +8,13 @@
 #include <vector>
 
 #ifdef BUILD_WITH_MINZ
-// Forward-declare so the rs-enhanced-depth headers stay out of this file.
+// Forward-declare so the enhanced-depth headers stay out of this file.
 namespace rs_depth {
     class DepthRangeImprover;
 }
 #endif
 
-// Viewer-side adapter for rs_depth::DepthRangeImprover (rs-enhanced-depth package).
+// Viewer-side adapter for rs_depth::DepthRangeImprover (librealsense2-enhanced-depth package).
 // Lazily initialises from camera calibration on the first frameset that
 // contains IR left, IR right, and depth together.
 // When BUILD_WITH_MINZ is not defined apply() is a no-op pass-through.
