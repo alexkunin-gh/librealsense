@@ -23,6 +23,10 @@ A modern React-based web UI for Intel RealSense cameras, leveraging the REST API
    cd wrappers/rest-api/tools/react-viewer
    npm install
    ```
+   if npm not installed, run before previous command:
+   ```bash
+   sudo apt install npm
+   ```
 
 2. **(Optional) Configure environment variables:**
    Copy `.env.example` to `.env` and fill in your AI chat provider key (Groq / OpenAI) and optional backend URL.
@@ -33,9 +37,11 @@ A modern React-based web UI for Intel RealSense cameras, leveraging the REST API
 3. **Start the REST API server** (in another terminal):
    ```bash
    cd wrappers/rest-api
-   pip install -r requirements.txt
+   python3 install.py
    python main.py
    ```
+   `install.py` installs the requirements and, if needed, also pulls
+   `pyrealsense2` from PyPI (skipped if you already have it installed).
 
 4. **Start the development server:**
    ```bash

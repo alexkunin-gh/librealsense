@@ -62,8 +62,13 @@ It simplifies remote control and data streaming from RealSense devices by handli
 2. **Install dependencies:**
 
    ```bash
-   pip3 install -r requirements.txt
+   python3 install.py
    ```
+
+   This installs the packages listed in `requirements.txt` and, if `pyrealsense2`
+   is not already importable, also pulls it from PyPI. If you already have
+   `pyrealsense2` installed (locally built, system package, or any pip install),
+   the script leaves it untouched.
 
 3. **Run API server:**
 
