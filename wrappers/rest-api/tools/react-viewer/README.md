@@ -66,26 +66,70 @@ backend automatically.
 ```
 react-viewer/
 ├── src/
-│   ├── api/              # API clients
-│   │   ├── client.ts     # REST API client
-│   │   ├── socket.ts     # Socket.IO client
-│   │   ├── webrtc.ts     # WebRTC handler
-│   │   └── types.ts      # TypeScript types
-│   ├── components/       # React components
+│   ├── api/                          # Backend clients
+│   │   ├── client.ts                 # REST API client
+│   │   ├── socket.ts                 # Socket.IO client
+│   │   ├── webrtc.ts                 # WebRTC handler
+│   │   ├── chat.ts                   # AI chat client
+│   │   ├── types.ts                  # TypeScript types
+│   │   └── index.ts
+│   ├── components/                   # React components
 │   │   ├── Header.tsx
 │   │   ├── DevicePanel.tsx
 │   │   ├── StreamViewer.tsx
 │   │   ├── ControlsPanel.tsx
 │   │   ├── PointCloudViewer.tsx
-│   │   └── IMUViewer.tsx
-│   ├── store/            # Zustand state management
+│   │   ├── IMUViewer.tsx
+│   │   ├── DepthLegend.tsx
+│   │   ├── FirmwareProgressModal.tsx
+│   │   ├── ApiDiagnostics.tsx
+│   │   ├── LoadingSplash.tsx
+│   │   ├── Toast.tsx
+│   │   ├── WhatsNew.tsx
+│   │   ├── ChatBot/                  # AI chat UI (Ask + Agent modes)
+│   │   │   ├── ChatButton.tsx
+│   │   │   ├── ChatPanel.tsx
+│   │   │   ├── ChatMessage.tsx
+│   │   │   ├── CodeExport.tsx
+│   │   │   ├── SettingsPreview.tsx
+│   │   │   └── index.ts
 │   │   └── index.ts
-│   ├── App.tsx           # Main application
-│   ├── main.tsx          # Entry point
-│   └── index.css         # Global styles
+│   ├── store/                        # Zustand state management
+│   │   └── index.ts
+│   ├── utils/
+│   │   └── chatPrompt.ts             # AI prompt builder
+│   ├── App.tsx                       # Main application
+│   ├── main.tsx                      # Entry point
+│   └── index.css                     # Global styles
+├── src-tauri/                        # Tauri desktop bridge (Rust)
+│   ├── src/                          # Rust sources
+│   ├── icons/                        # App icons (reused from common/res)
+│   ├── resources/
+│   ├── Cargo.toml
+│   └── build.rs
+├── public/                           # Static assets (favicon, logos)
 ├── scripts/
-│   └── bundle-for-prod.js  # Production bundler
-└── package.json
+│   └── bundle-for-prod.js            # Production bundler
+├── tests/
+│   ├── unit/                         # Vitest unit/integration tests
+│   ├── e2e/                          # Playwright E2E tests
+│   ├── mocks/                        # MSW handlers + fixtures
+│   ├── setup/                        # Vitest global setup
+│   ├── utils/                        # Test helpers
+│   ├── INSTALLATION.md
+│   └── README.md
+├── DESKTOP_BUILD.md                  # Tauri build instructions
+├── LICENSE-THIRD-PARTY.md            # Third-party JS/Rust licenses
+├── build-all.ps1                     # One-shot Windows build (FastAPI exe + Tauri MSI/NSIS)
+├── index.html
+├── package.json
+├── tsconfig.json
+├── tsconfig.node.json
+├── vite.config.ts
+├── vitest.config.ts
+├── playwright.config.ts
+├── postcss.config.js
+└── tailwind.config.js
 ```
 
 ## Available Scripts
