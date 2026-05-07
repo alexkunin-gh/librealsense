@@ -1,8 +1,6 @@
 # License: Apache 2.0. See LICENSE file in root directory.
 # Copyright(c) 2026 RealSense, Inc. All Rights Reserved.
 
-# We can enable D555 when RSDEV-3159 is resolved
-
 import logging
 import pytest
 import pyrealsense2 as rs
@@ -12,7 +10,6 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.device_each("D400*"),
     pytest.mark.device_each("D500*"),
-    pytest.mark.device_exclude("D555"),
 ]
 
 

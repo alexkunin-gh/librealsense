@@ -11,7 +11,6 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.device_each("D400*"),
     pytest.mark.device_each("D500*"),
-    pytest.mark.device_exclude("D555"),
 ]
 
 # rotation tolerance - units are in cosinus of radians
@@ -57,25 +56,6 @@ def is_identity(m):
     return matrices_equal(m, np.eye(4))
 
 
-ROTATION_DIAGONAL_MIN = 0.95
-ROTATION_DIAGONAL_MAX = 1.0
-
-
-def check_calibration_criteria(extr):
-    r = extr.rotation
-    return (ROTATION_DIAGONAL_MIN < r[0] <= ROTATION_DIAGONAL_MAX
-            and ROTATION_DIAGONAL_MIN < r[4] <= ROTATION_DIAGONAL_MAX
-            and ROTATION_DIAGONAL_MIN < r[8] <= ROTATION_DIAGONAL_MAX)
-
-
-def is_rgb_calibrated(profiles):
-    depth = next((p for p in profiles if p.stream_type() == rs.stream.depth), None)
-    color = next((p for p in profiles if p.stream_type() == rs.stream.color), None)
-    if depth is None or color is None:
-        return False
-    return check_calibration_criteria(depth.get_extrinsics_to(color))
-
-
 def test_extrinsics_graph_4x4(test_device):
     """Extrinsics graph - matrices 4x4
 
@@ -88,16 +68,9 @@ def test_extrinsics_graph_4x4(test_device):
     log.info("device: %s", device.get_info(rs.camera_info.name))
     sensors = device.query_sensors()
 
-    profiles = []
+    relevant_profiles = []
     for sensor in sensors:
-        profiles.extend(sensor.get_stream_profiles())
-
-    streams_to_ignore = [rs.stream.accel, rs.stream.gyro]
-    if not is_rgb_calibrated(profiles):
-        log.info("RGB is not calibrated on this device")
-        streams_to_ignore.append(rs.stream.color)
-
-    relevant_profiles = [p for p in profiles if p.stream_type() not in streams_to_ignore]
+        relevant_profiles.extend(sensor.get_stream_profiles())
 
     start_point = [1.0, 2.0, 3.0]
 
