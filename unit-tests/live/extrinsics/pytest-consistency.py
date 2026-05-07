@@ -93,12 +93,11 @@ def test_extrinsics_graph_4x4(test_device):
             pr_j_to_i = matrix_4x4_from_extrinsics(extr_j_to_i)
 
             product = pr_i_to_j @ pr_j_to_i
-            if not is_identity(product):
-                log.info("i : stream %s, format %s, fps %s, index %s",
-                         p_i.stream_type(), p_i.format(), p_i.fps(), p_i.stream_index())
-                log.info("j : stream %s, format %s, fps %s, index %s",
-                         p_j.stream_type(), p_j.format(), p_j.fps(), p_j.stream_index())
-            assert is_identity(product)
+            assert is_identity(product), (
+                f"composed extrinsics not identity: "
+                f"i=(stream={p_i.stream_type()}, format={p_i.format()}, fps={p_i.fps()}, index={p_i.stream_index()}), "
+                f"j=(stream={p_j.stream_type()}, format={p_j.format()}, fps={p_j.fps()}, index={p_j.stream_index()})"
+            )
 
             # checking with API rs2_transform_point_to_point
             transformed_point = rs.rs2_transform_point_to_point(extr_i_to_j, start_point)
