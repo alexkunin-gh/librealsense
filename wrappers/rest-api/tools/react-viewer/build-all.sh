@@ -76,8 +76,9 @@ if $CLEAN; then
     find "$REST_API_DIR" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 fi
 
-if ! command -v pyinstaller >/dev/null 2>&1; then
-    err "PyInstaller not found. Install with: pip install pyinstaller"
+PYTHON_BIN="${PYTHON:-python3}"
+if ! "$PYTHON_BIN" -c "import PyInstaller" >/dev/null 2>&1; then
+    err "PyInstaller not found for $PYTHON_BIN. Install with: $PYTHON_BIN -m pip install pyinstaller"
     exit 1
 fi
 
@@ -86,7 +87,7 @@ mkdir -p "$REST_API_OUTPUT" "$REST_API_WORK"
 step1_start=$(date +%s)
 (
     cd "$REST_API_DIR"
-    pyinstaller main.py --name realsense_api \
+    "$PYTHON_BIN" -m PyInstaller main.py --name realsense_api \
         --distpath "$REST_API_OUTPUT" \
         --workpath "$REST_API_WORK" -y
 )
