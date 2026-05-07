@@ -97,6 +97,10 @@ def fw_logger(test_device, tmp_path):
 
     yield logger, raw_message, parsed_message, events_real_path, definitions_path
 
+    for p in (events_real_path, events_dummy_path, definitions_path):
+        if os.path.exists( p ):
+            os.remove( p )
+
 
 def test_load_unsupported_definitions_file(fw_logger):
     logger, _raw, _parsed, events_real_path, _definitions_path = fw_logger

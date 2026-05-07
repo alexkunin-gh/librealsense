@@ -19,6 +19,15 @@ pytestmark = [
 ]
 
 
+@pytest.fixture(autouse=True)
+def _cleanup_xml_files(tmp_path):
+    yield
+    for name in ('events.xml', 'definitions.xml'):
+        p = os.path.join(str(tmp_path), name)
+        if os.path.exists(p):
+            os.remove(p)
+
+
 def test_legacy_firmware_logger(test_device, tmp_path):
     dev, _ = test_device
     logger = dev.as_firmware_logger()
