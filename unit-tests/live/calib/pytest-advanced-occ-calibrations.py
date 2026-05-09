@@ -22,7 +22,7 @@ from calibrations_common import (
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.context("calibration"),
+    pytest.mark.context("nightly"),
     pytest.mark.device("D400*"),
     pytest.mark.device_exclude("D401"),
     pytest.mark.device_exclude("D555"),
