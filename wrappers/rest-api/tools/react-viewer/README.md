@@ -146,18 +146,25 @@ Prerequisites: Node.js 18+, Python 3.8+, Rust 1.56+ (https://rustup.rs/), PyInst
 **Linux distro support (Tauri 1.5).** This project currently uses Tauri 1.5, which
 links against WebKitGTK 4.0:
 
-| Ubuntu LTS    | Codename | Status with Tauri 1.5                                                |
-|---------------|----------|----------------------------------------------------------------------|
-| 20.04         | Focal    | ✅ Native build                                                       |
-| 22.04         | Jammy    | ✅ Native build (recommended)                                         |
-| 24.04         | Noble    | ⚠️ Native 4.0 headers removed; symlink workaround only goes part-way  |
-| 26.04         | Resolute | ❌ 4.0 packages no longer shipped                                     |
+| Ubuntu LTS    | Codename | Desktop build (Tauri)                                                 |
+|---------------|----------|-----------------------------------------------------------------------|
+| 20.04         | Focal    | ✅ Native build                                                        |
+| 22.04         | Jammy    | ✅ Native build (recommended)                                          |
+| 24.04         | Noble    | ❌ Not supported with Tauri 1.5 (4.0 headers removed; the symlink hack passes pkg-config but the wry crate then fails to compile against the 4.1 API) |
+| 26.04         | Resolute | ❌ 4.0 packages no longer shipped                                      |
 
-**Migration to Tauri 2** — planned as a future improvement. Tauri 2 links against
-WebKitGTK 4.1 and builds natively on Ubuntu 24.04+. The migration is medium effort
-(half a day for an experienced dev): bump `tauri` / `tauri-build` / wry, run
-`npm run tauri migrate` to auto-rewrite ~70 % of `tauri.conf.json` and the JS API
-imports, then fix residual compile errors and re-test the FastAPI subprocess spawn.
+> **Ubuntu 24.04 / 26.04 users:** the desktop installer build (`build-all.sh`) cannot
+> currently produce a working binary on these distros. Use the **two-terminal dev
+> setup** described in [Quick Start](#quick-start) instead — it works on every Ubuntu
+> version. That gives you the full viewer running locally (FastAPI on `:8000`, React
+> on `:3000` in the browser); you just don't get a packaged `.AppImage` / `.deb`.
+
+**Migration to Tauri 2** — planned as a future improvement, and the path that will
+unblock Ubuntu 24.04+ desktop builds. Tauri 2 links against WebKitGTK 4.1 and builds
+natively on those distros. The migration is medium effort (half a day for an
+experienced dev): bump `tauri` / `tauri-build` / wry, run `npm run tauri migrate` to
+auto-rewrite ~70 % of `tauri.conf.json` and the JS API imports, then fix residual
+compile errors and re-test the FastAPI subprocess spawn.
 
 **Linux only — Tauri build dependencies.** The Rust bundler needs WebKitGTK and a few
 other dev headers. On Debian/Ubuntu:
