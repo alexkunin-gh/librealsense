@@ -153,10 +153,9 @@ links against WebKitGTK 4.0:
 | 24.04         | Noble    | ⚠️ Native 4.0 headers removed; symlink workaround only goes part-way  |
 | 26.04         | Resolute | ❌ 4.0 packages no longer shipped                                     |
 
-**Migration to Tauri 2** — tracked in
-[RSDEV-7958](https://realsenseai.atlassian.net/browse/RSDEV-7958). Tauri 2 links
-against WebKitGTK 4.1 and builds natively on Ubuntu 24.04+. The migration is medium
-effort (half a day for an experienced dev): bump `tauri` / `tauri-build` / wry, run
+**Migration to Tauri 2** — planned as a future improvement. Tauri 2 links against
+WebKitGTK 4.1 and builds natively on Ubuntu 24.04+. The migration is medium effort
+(half a day for an experienced dev): bump `tauri` / `tauri-build` / wry, run
 `npm run tauri migrate` to auto-rewrite ~70 % of `tauri.conf.json` and the JS API
 imports, then fix residual compile errors and re-test the FastAPI subprocess spawn.
 
