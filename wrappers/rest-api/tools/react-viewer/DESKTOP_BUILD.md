@@ -211,8 +211,11 @@ needed for Tauri-specific commands (diagnostics, etc.).
 ## Troubleshooting
 
 ### `failed to get cargo metadata: No such file or directory`
-Cargo isn't installed or isn't on PATH. Install Rust via https://rustup.rs/ and run
-`source $HOME/.cargo/env`.
+Cargo isn't installed or isn't on `PATH`. Install Rust via https://rustup.rs/ and run
+`source $HOME/.cargo/env` in the current shell (and add the same line to `~/.bashrc`
+to make it permanent). `build-all.sh` also tries to auto-source `$HOME/.cargo/env`
+when it detects `cargo` is missing, but only if rustup put the file there in the
+first place.
 
 ### `The system library 'libsoup-2.4' required by crate 'soup2-sys' was not found`
 Linux Tauri build dep missing. Install the apt prerequisites listed in the README

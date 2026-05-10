@@ -152,6 +152,15 @@ sudo apt install -y \
   pkg-config build-essential
 ```
 
+**If `build-all.sh` fails with `failed to get cargo metadata` or `cargo: command not
+found`**, your shell does not have `cargo` on `PATH`. After installing Rust via
+[rustup](https://rustup.rs/), enable it in the current shell with:
+```bash
+source $HOME/.cargo/env
+```
+To make this permanent, add the same line to `~/.bashrc`. The build script also
+attempts this automatically if it detects `cargo` is missing.
+
 For Tauri internals (architecture, subprocess management, config reference),
 manual build steps, dev mode and troubleshooting, see
 [DESKTOP_BUILD.md](DESKTOP_BUILD.md).

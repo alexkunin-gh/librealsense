@@ -127,6 +127,24 @@ ok "React UI built in $((step2_end - step2_start))s"
 # Step 3: Build Tauri bundles
 info "Step 3/3: Building Tauri production bundles..."
 
+# Make sure cargo is on PATH. If Rust was installed via rustup, it lives in
+# ~/.cargo/bin which interactive shells get from ~/.cargo/env. Non-interactive
+# shells (e.g. when this script runs from a fresh terminal where ~/.bashrc
+# wasn't sourced) often miss it - source it here if available.
+if ! command -v cargo >/dev/null 2>&1; then
+    if [ -f "$HOME/.cargo/env" ]; then
+        warn "cargo not on PATH; sourcing $HOME/.cargo/env"
+        # shellcheck disable=SC1091
+        source "$HOME/.cargo/env"
+    fi
+fi
+if ! command -v cargo >/dev/null 2>&1; then
+    err "cargo not found. Install Rust from https://rustup.rs/ then run:"
+    err "  source \$HOME/.cargo/env"
+    err "and retry this script."
+    exit 1
+fi
+
 if [ -d "$SCRIPT_DIR/src-tauri/target" ]; then
     warn "Removing legacy src-tauri/target directory..."
     rm -rf "$SCRIPT_DIR/src-tauri/target"
