@@ -89,8 +89,16 @@ class TestRealSenseAPI:
             # Update pipelines to indicate streaming
             rs_manager.pipelines[device_id] = MagicMock()
 
-            # Return status
-            return rs_manager.get_stream_status(device_id)
+            # Return a dict matching the real start_stream() shape so the endpoint
+            # can subscript result['timings'] without a TypeError.
+            return {
+                "device_id": device_id,
+                "is_streaming": True,
+                "active_streams": list(rs_manager.active_streams[device_id]),
+                "timings": {},
+                "config_reused": False,
+                "config_signature": "mock-signature",
+            }
 
         def mock_refresh_devices():
             # Populate the devices dictionary with our mock devices
