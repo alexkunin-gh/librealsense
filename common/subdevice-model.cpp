@@ -234,10 +234,10 @@ namespace rs2
                         if( !check( RS2_STREAM_DEPTH ) || !check( RS2_STREAM_INFRARED ) )
                             return false;
                     }
-                    else if( !res_values.empty() )
+                    else if( !res_values.empty()
+                             && ui.selected_res_id >= 0
+                             && ui.selected_res_id < static_cast< int >( res_values.size() ) )
                     {
-                        if( ui.selected_res_id < 0 || ui.selected_res_id >= static_cast< int >( res_values.size() ) )
-                            return false;
                         auto& res = res_values[ui.selected_res_id];
                         if( res.first < 640 || res.second < 480 )
                             return false;
