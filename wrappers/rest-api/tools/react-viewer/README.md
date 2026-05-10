@@ -143,6 +143,23 @@ Both scripts produce, under the repository root:
 Prerequisites: Node.js 18+, Python 3.8+, Rust 1.56+ (https://rustup.rs/), PyInstaller
 (`pip install pyinstaller`).
 
+**Linux distro support (Tauri 1.5).** This project currently uses Tauri 1.5, which
+links against WebKitGTK 4.0:
+
+| Ubuntu LTS    | Codename | Status with Tauri 1.5                                                |
+|---------------|----------|----------------------------------------------------------------------|
+| 20.04         | Focal    | ✅ Native build                                                       |
+| 22.04         | Jammy    | ✅ Native build (recommended)                                         |
+| 24.04         | Noble    | ⚠️ Native 4.0 headers removed; symlink workaround only goes part-way  |
+| 26.04         | Resolute | ❌ 4.0 packages no longer shipped                                     |
+
+**Migration to Tauri 2** — tracked in
+[RSDEV-7958](https://realsenseai.atlassian.net/browse/RSDEV-7958). Tauri 2 links
+against WebKitGTK 4.1 and builds natively on Ubuntu 24.04+. The migration is medium
+effort (half a day for an experienced dev): bump `tauri` / `tauri-build` / wry, run
+`npm run tauri migrate` to auto-rewrite ~70 % of `tauri.conf.json` and the JS API
+imports, then fix residual compile errors and re-test the FastAPI subprocess spawn.
+
 **Linux only — Tauri build dependencies.** The Rust bundler needs WebKitGTK and a few
 other dev headers. On Debian/Ubuntu:
 ```bash
