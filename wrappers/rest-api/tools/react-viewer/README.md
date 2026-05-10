@@ -54,7 +54,14 @@ mode (the **Ask** mode uses Kapa.ai and works without any key). The viewer itsel
 runs fine without a `.env` file — the chat icon will just show "AI Assistant
 unavailable" until a key is provided.
 
-**Step 1 — copy `.env.example` to `.env`** (same content, different filename so the
+**Step 1 — make sure you are in the React viewer folder** (this is where both
+`.env.example` and the dev server live):
+
+```bash
+cd wrappers/rest-api/tools/react-viewer
+```
+
+**Step 2 — copy `.env.example` to `.env`** (same content, different filename so the
 viewer picks up your local settings without overwriting the template):
 
 ```bash
@@ -70,7 +77,7 @@ Copy-Item .env.example .env
 copy .env.example .env
 ```
 
-**Step 2 — get an API key from one provider:**
+**Step 3 — get an API key from one provider:**
 
 - **Groq (recommended, free):** sign up at [console.groq.com/keys](https://console.groq.com/keys)
   and create a key. Uses Llama 3.3 70B.
@@ -79,7 +86,7 @@ copy .env.example .env
 - **Self-hosted / OpenAI-compatible:** any endpoint that speaks the OpenAI chat
   completions API (Ollama, LM Studio, vLLM, etc.).
 
-**Step 3 — open `.env` in any text editor and fill in the value(s):**
+**Step 4 — open `.env` in any text editor and fill in the value(s):**
 
 For Groq (the default), uncomment / set the first line:
 ```env
@@ -90,7 +97,7 @@ For OpenAI, uncomment that line instead and paste your `sk-...` key. For a custo
 provider, set `VITE_LLM_API_URL`, `VITE_LLM_API_KEY` and `VITE_LLM_MODEL`. You can
 also override the backend URL via `VITE_API_URL` if FastAPI is on a different host.
 
-**Step 4 — restart `npm run dev`** so Vite reloads the new env values (Vite only
+**Step 5 — restart `npm run dev`** so Vite reloads the new env values (Vite only
 reads `.env*` files at startup).
 
 The `.env` file is git-ignored — your key never gets committed.
