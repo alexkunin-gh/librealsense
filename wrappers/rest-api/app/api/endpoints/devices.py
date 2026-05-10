@@ -45,8 +45,9 @@ async def refresh_devices(
 ):
     """
     Force device re-enumeration and return the updated list.
+    Delegates to get_devices(force_refresh=True) so the underlying logic lives in one place.
     """
-    return rs_manager.get_devices(force_refresh=True)
+    return await get_devices(force_refresh=True, rs_manager=rs_manager)
 
 @router.post("/{device_id}/hw_reset", response_model=bool)
 async def hw_reset_device(
