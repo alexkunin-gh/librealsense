@@ -49,11 +49,55 @@ sudo apt install npm
 
 ### (Optional) Configure environment variables
 
-Before starting the dev server, copy `.env.example` to `.env` and fill in your AI chat
-provider key (Groq / OpenAI) and optional backend URL:
+You only need this step if you want to enable the AI chat assistant in **Agent**
+mode (the **Ask** mode uses Kapa.ai and works without any key). The viewer itself
+runs fine without a `.env` file — the chat icon will just show "AI Assistant
+unavailable" until a key is provided.
+
+**Step 1 — copy `.env.example` to `.env`** (same content, different filename so the
+viewer picks up your local settings without overwriting the template):
+
 ```bash
+# Linux / macOS
 cp .env.example .env
 ```
+```powershell
+# Windows PowerShell
+Copy-Item .env.example .env
+```
+```cmd
+:: Windows cmd.exe
+copy .env.example .env
+```
+
+**Step 2 — get an API key from one provider:**
+
+- **Groq (recommended, free):** sign up at [console.groq.com/keys](https://console.groq.com/keys)
+  and create a key. Uses Llama 3.3 70B.
+- **OpenAI (paid):** create a key at
+  [platform.openai.com/api-keys](https://platform.openai.com/api-keys). Uses GPT-4o-mini.
+- **Self-hosted / OpenAI-compatible:** any endpoint that speaks the OpenAI chat
+  completions API (Ollama, LM Studio, vLLM, etc.).
+
+**Step 3 — open `.env` in any text editor and fill in the value(s):**
+
+For Groq (the default), uncomment / set the first line:
+```env
+VITE_GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+For OpenAI, uncomment that line instead and paste your `sk-...` key. For a custom
+provider, set `VITE_LLM_API_URL`, `VITE_LLM_API_KEY` and `VITE_LLM_MODEL`. You can
+also override the backend URL via `VITE_API_URL` if FastAPI is on a different host.
+
+**Step 4 — restart `npm run dev`** so Vite reloads the new env values (Vite only
+reads `.env*` files at startup).
+
+The `.env` file is git-ignored — your key never gets committed.
+
+The procedure is the same on Windows, Linux, and macOS apart from the file-copy
+command in step 1. Editing and the key-provider sign-up are identical across
+platforms.
 
 ### Open in browser
 
