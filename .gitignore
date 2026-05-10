@@ -99,3 +99,5 @@ librealsense-log.txt
 
 # agents
 .github/agents/
+
+unit-tests/logs/pytest-results.xml

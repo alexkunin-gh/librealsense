@@ -121,17 +121,20 @@ When migrating a legacy `test-*.py` to `pytest-*.py`:
 
     The helper caches the result per `(device serial, min_version, inclusive)` — the check runs at most once per device/version combination. On pass the result is cached and subsequent calls are no-ops. On fail `pytest.skip()` is raised (cache never written), so every test that calls it will also skip. It also handles devices that don't expose firmware version info.
 
-14. **Don't wrap test bodies in `try`/`finally` to swallow failures**: Pytest natively reports any unhandled exception as a test failure — there is no need for the legacy `try: ... except: test.unexpected_exception()` pattern. When migrating, just **delete** the `try`/`except` wrapper and let pytest handle it.
+14. **Don't swallow failures or lose the original traceback**: Pytest natively reports any unhandled exception as a test failure — there is no need for the legacy `try: ... except: test.unexpected_exception()` pattern. When migrating, just **delete** the `try`/`except` wrapper and let pytest handle it.
 
-    - **Cleanup belongs in a fixture**, not in `try/finally` inside the test body. Use `@pytest.fixture` with `yield`: code before `yield` is setup, code after `yield` runs even when the test fails (see the `_sw_session` autouse fixture in `unit-tests/syncer/pytest-ts-*.py` for the pattern).
-    - **If you genuinely must wrap with `try`** (e.g. to attach context to the failure message), **always re-raise or fail explicitly** — never swallow:
+    The goal of this rule is to preserve the real error message and traceback, not to ban `try/finally` entirely. The patterns below are about *what to keep* vs *what to remove*.
+
+    - **Bare `try/finally` for resource bracketing is fine.** Python re-raises any exception from the `try` block after `finally` runs, so the original traceback is preserved. Use it when a resource is acquired and released tightly within one test section. Keep the `finally` body **simple and exception-safe** — if cleanup itself can raise, it may mask the original failure.
+    - **Test-scoped cleanup belongs in a fixture**, not in `try/finally` wrapping the entire test body. Use `@pytest.fixture` with `yield`: code before `yield` is setup, code after `yield` runs even when the test fails (see the `_sw_session` autouse fixture in `unit-tests/syncer/pytest-ts-*.py`). Reserve in-test `try/finally` for *section-scoped* resource brackets where a fixture would force awkward state passing.
+    - **Never swallow**: `except: pass` and `except Exception: pytest.fail("generic message")` (without `from e`) both turn a real failure into either a silent pass or a stack trace pointing at the wrong line. Don't do either.
+    - **If you genuinely must wrap with `try/except`** (e.g. to attach context to the failure message), preserve the original exception:
       ```python
       try:
           do_something()
       except Exception as e:
-          pytest.fail( f"context-specific message: {e}" )  # or: raise
+          pytest.fail( f"context-specific message: {e}" )  # or simply: raise
       ```
-      A bare `except: pass` or a `finally:` that does cleanup but doesn't re-raise the original exception turns a real failure into a silent pass.
     - **Expected exceptions** (legacy `try/except RuntimeError: test.check_exception(...)`) → migrate to `with pytest.raises(RuntimeError, match="..."):` (see `unit-tests/syncer/pytest-ts-same-fps.py:63` for the pattern).
 
 ## Handling `on_fail=test.ABORT`

@@ -2,34 +2,45 @@
 # Copyright(c) 2025 RealSense, Inc. All Rights Reserved.
 
 # DDS devices have not implemented firmware_logger interface yet. Only D400 devices use legacy logging format
-# test:device each(D400*)
-# test:donotrun:!nightly
 
-from rspy import log, test
-from rspy import librs as rs
-import xml.etree.ElementTree as ET
+import logging
 import os.path
+import re
+import xml.etree.ElementTree as ET
 
-# Working directory changes between manual runs and CI runs
-path = os.path.dirname( os.path.realpath(__file__) )
+import pytest
+import pyrealsense2 as rs
 
-if log.is_debug_on():
-    rs.log_to_console( rs.log_severity.debug )
+log = logging.getLogger(__name__)
 
-with test.closure( 'Create the logger', on_fail=test.ABORT ):
-    context = rs.context()
-    dev = context.query_devices()[0]
+pytestmark = [
+    pytest.mark.device_each("D400*"),
+    pytest.mark.context("nightly"),
+]
+
+
+@pytest.fixture(autouse=True)
+def _cleanup_xml_files(tmp_path):
+    yield
+    for name in ('events.xml', 'definitions.xml'):
+        p = os.path.join(str(tmp_path), name)
+        if os.path.exists(p):
+            os.remove(p)
+
+
+def test_legacy_firmware_logger(test_device, tmp_path):
+    dev, _ = test_device
     logger = dev.as_firmware_logger()
-    test.check( logger )
+    assert logger
     raw_message = logger.create_message()
     parsed_message = logger.create_parsed_message()
 
-with test.closure( 'Load unsupported definitions file' ):
+    # Load unsupported definitions file
     events = ET.fromstring(
              """<Format>
                   <Event id="0" numberOfArguments="0" format="Event0" />
                 </Format>""" )
-    events_path = os.path.join( path, 'events.xml' )
+    events_path = os.path.join( str(tmp_path), 'events.xml' )
     ET.ElementTree( events ).write( events_path )
     definitions = ET.fromstring(
                   """<Format>
@@ -44,16 +55,16 @@ with test.closure( 'Load unsupported definitions file' ):
                      </Format>""" )
     definitions[0][0].set( "Path", events_path )
     definitions[1][0].set( "Path", events_path )
-    definitions_path = os.path.join( path, 'definitions.xml' )
+    definitions_path = os.path.join( str(tmp_path), 'definitions.xml' )
     ET.ElementTree( definitions ).write( definitions_path )
     with open( definitions_path, 'r') as f:
-        definitions = f.read()
-    logger.init_parser( definitions )
+        definitions_text = f.read()
+    logger.init_parser( definitions_text )
     logger.get_firmware_log( raw_message ) # Get a log entry from the camera with unknown content
-    test.check_throws( lambda: logger.parse_log( raw_message, parsed_message ), RuntimeError, 'FW logs parser expect one formatting options, have 2' )
-    
-with test.closure( 'Load supported definitions file' ):
-    # Events based on real events file, representing logs we are most likely to receive
+    with pytest.raises(RuntimeError, match=re.escape("FW logs parser expect one formatting options, have 2")):
+        logger.parse_log( raw_message, parsed_message )
+
+    # Load supported definitions file
     # Use all entry options - Event, File, Thread, Enum
     events = ET.fromstring(
              """<Format>
@@ -83,7 +94,6 @@ with test.closure( 'Load supported definitions file' ):
                     </Enum>
                   </Enums>
                 </Format>""" )
-    events_path = os.path.join( path, 'events.xml' )
     ET.ElementTree( events ).write( events_path )
     definitions = ET.fromstring(
           """<Format>
@@ -92,35 +102,18 @@ with test.closure( 'Load supported definitions file' ):
                </Source>
              </Format>""" )
     definitions[0][0].set( "Path", events_path )
-    definitions_path = os.path.join( path, 'definitions.xml' )
     ET.ElementTree( definitions ).write( definitions_path )
     with open( definitions_path, 'r') as f:
-        definitions = f.read()
-    logger.init_parser( definitions )
-    try:
-        logger.get_firmware_log( raw_message ) # Get a log entry from the camera with unknown content
-        logger.parse_log( raw_message, parsed_message )
-        log.d( 'Parsed message: ', parsed_message.get_message() )
-    except:
-        test.unexpected_exception()
+        definitions_text = f.read()
+    logger.init_parser( definitions_text )
+    logger.get_firmware_log( raw_message ) # Get a log entry from the camera with unknown content
+    logger.parse_log( raw_message, parsed_message )
+    log.debug( 'Parsed message: %s', parsed_message.get_message() )
 
-with test.closure( 'Load events file directly' ):
+    # Load events file directly
     with open( events_path, 'r') as f:
-        events = f.read()
-    logger.init_parser( events )
-    try:
-        logger.get_firmware_log( raw_message ) # Get a log entry from the camera with unknown content
-        logger.parse_log( raw_message, parsed_message )
-        log.d( 'Parsed message: ', parsed_message.get_message() )
-    except:
-        test.unexpected_exception()
-        
-with test.closure( 'All done' ):
-    if os.path.exists( events_path ):
-      os.remove( events_path )
-    if os.path.exists( definitions_path ):
-      os.remove( definitions_path )
-    del dev
-    del context
-
-test.print_results()
+        events_text = f.read()
+    logger.init_parser( events_text )
+    logger.get_firmware_log( raw_message ) # Get a log entry from the camera with unknown content
+    logger.parse_log( raw_message, parsed_message )
+    log.debug( 'Parsed message: %s', parsed_message.get_message() )
