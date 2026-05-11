@@ -199,13 +199,15 @@ def pytest_configure(config):
     # --retries N → module-scoped retry.  Run all tests in a file; if any fail,
     # recycle the device and rerun the *entire* module — up to N extra attempts.
     # Implemented on top of pytest-repeat (count = N+1, module scope).
-    # pytest-retry's function-level retry is disabled so only module-level kicks in.
+    # pytest-retry's function-level retry is ALWAYS disabled when --retries is used.
     retries_val = config.getoption('retries', default=0)
-    if retries_val and config.getoption('count', default=1) <= 1:
+    if retries_val:
         config.option.retries = 0           # disable pytest-retry function-level retry
-        config.option.count = retries_val + 1
-        config.option.repeat_scope = 'module'
-        config._module_retry_mode = True    # flag checked by our skip-if-no-failures hook
+        if config.getoption('count', default=1) <= 1:
+            # --retries without --repeat: add retry passes via pytest-repeat
+            config.option.count = retries_val + 1
+            config.option.repeat_scope = 'module'
+            config._module_retry_mode = True    # skip retry passes when previous pass was clean
 
     # Parse and store context
     context_str = config.getoption("--context", default="")

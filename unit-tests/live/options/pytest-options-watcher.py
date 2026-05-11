@@ -44,6 +44,7 @@ def setup_depth_watcher(test_device):
     dev, ctx = test_device
     _depth_sensor = dev.first_depth_sensor()
     _depth_sensor.on_options_changed(callback)
+    time.sleep(0.5)  # let the options-watcher establish its baseline before making changes
     return _depth_sensor, count
 
 
