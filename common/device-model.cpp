@@ -2994,11 +2994,14 @@ namespace rs2
                         ImGui::SetCursorPos({ windows_width - 42, pos.y - 3 });
 
                         const bool pb_available = pb->is_available();
-                        struct DisabledGuard {
+                        // RAII guard pairing BeginDisabled/EndDisabled: keeps them balanced
+                        // even if an exception is thrown between begin and the explicit end()
+                        // call below (which runs before the tooltip hover check).
+                        struct disable_guard {
                             bool active, ended;
-                            DisabledGuard( bool a ) : active( a ), ended( false ) { if( active ) ImGui::BeginDisabled( true ); }
+                            disable_guard( bool a ) : active( a ), ended( false ) { if( active ) ImGui::BeginDisabled( true ); }
                             void end() { if( active && !ended ) { ended = true; ImGui::EndDisabled(); } }
-                            ~DisabledGuard() { end(); }
+                            ~disable_guard() { end(); }
                         } dg( !pb_available );
                         try
                         {
