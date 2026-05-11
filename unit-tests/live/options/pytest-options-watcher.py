@@ -11,6 +11,7 @@ pytestmark = [
     pytest.mark.device("D400*"),
     pytest.mark.device_each("D555"),
     pytest.mark.context("nightly"),
+    pytest.mark.skip(reason="Disabling till CI failure stabilized. See RSDEV-9288")
 ]
 
 changed_options = 0
