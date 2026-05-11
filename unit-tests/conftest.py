@@ -170,6 +170,10 @@ def pytest_addoption(parser):
 # Shared context tags (e.g. "nightly", "weekly") — tests check this to adjust behavior
 context_list = []
 
+# Module-scoped retry: tracks which (module, repeat_step) passes had failures.
+# Used by --retries to skip retry passes when the previous pass was clean.
+_module_pass_had_failure = {}  # (module_file, step) -> True
+
 
 def pytest_configure(config):
     """Early setup: register markers, configure defaults, and query connected devices."""
@@ -191,6 +195,17 @@ def pytest_configure(config):
     if repeat_val and config.getoption('count', default=1) <= 1:
         config.option.count = repeat_val
         config.option.repeat_scope = 'module'
+
+    # --retries N → module-scoped retry.  Run all tests in a file; if any fail,
+    # recycle the device and rerun the *entire* module — up to N extra attempts.
+    # Implemented on top of pytest-repeat (count = N+1, module scope).
+    # pytest-retry's function-level retry is disabled so only module-level kicks in.
+    retries_val = config.getoption('retries', default=0)
+    if retries_val and config.getoption('count', default=1) <= 1:
+        config.option.retries = 0           # disable pytest-retry function-level retry
+        config.option.count = retries_val + 1
+        config.option.repeat_scope = 'module'
+        config._module_retry_mode = True    # flag checked by our skip-if-no-failures hook
 
     # Parse and store context
     context_str = config.getoption("--context", default="")
@@ -325,7 +340,7 @@ def pytest_runtest_protocol(item, nextitem):
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
-    """Log test duration and any failures/errors."""
+    """Log test duration and any failures/errors.  Track per-module failures for --retries."""
     outcome = yield
     report = outcome.get_result()
 
@@ -339,6 +354,26 @@ def pytest_runtest_makereport(item, call):
     if call.when == "call":
         ensure_newline()
         log.debug(f"Test execution took {report.duration:.3f}s")
+
+    # Record module-level failure for --retries skip-if-clean logic
+    if report.when == "call" and report.failed and getattr(item.config, '_module_retry_mode', False):
+        callspec = getattr(item, 'callspec', None)
+        step = callspec.params.get('__pytest_repeat_step_number', 0) if callspec else 0
+        mod = item.module.__file__
+        _module_pass_had_failure[(mod, step)] = True
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_setup(item):
+    """Skip retry passes whose previous pass had no failures (--retries optimisation)."""
+    if not getattr(item.config, '_module_retry_mode', False):
+        return
+    callspec = getattr(item, 'callspec', None)
+    step = callspec.params.get('__pytest_repeat_step_number', 0) if callspec else 0
+    if step > 0:
+        mod = item.module.__file__
+        if not _module_pass_had_failure.get((mod, step - 1), False):
+            pytest.skip("Module retry skipped — no failures in previous pass")
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
@@ -473,17 +508,14 @@ def module_device_setup(request):
         log.debug(f"Test will use first matching device: {serial_number}")
 
     # Enable only this device; recycle only once per module (like run-unit-tests.py),
-    # but also recycle on retries and repeats (--repeat / --count).
+    # and at the start of each module-scoped repeat pass (--repeat).
     device = devices.get(serial_number)
     device_name = device.name if device else serial_number
     log.info(f"Configuration: {device_name} [{serial_number}]")
 
     module = request.node.module
-    nodeid = request.node.nodeid
     no_reset = request.config.getoption("--no-reset", default=False)
     last_device = getattr(module, '_last_device_serial', None)
-    last_test = getattr(module, '_last_test_nodeid', None)
-    is_retry = (last_test == nodeid)
     device_changed = (last_device is not None and last_device != serial_number)
     first_setup = (last_device is None)
 
@@ -494,11 +526,10 @@ def module_device_setup(request):
     last_repeat_step = getattr(module, '_last_repeat_step', None)
     is_new_repeat_pass = repeat_step is not None and last_repeat_step is not None and repeat_step != last_repeat_step
 
-    recycle = not no_reset and (first_setup or device_changed or is_retry or is_new_repeat_pass)
+    recycle = not no_reset and (first_setup or device_changed or is_new_repeat_pass)
 
     if not recycle and not first_setup:
         log.debug(f"Device {serial_number} already enabled, skipping hub setup")
-        module._last_test_nodeid = nodeid
         module._last_repeat_step = repeat_step
         yield serial_number
         return
@@ -507,7 +538,6 @@ def module_device_setup(request):
         log.debug(f"{'Recycling' if recycle else 'Enabling'} device via hub...")
         devices.enable_only([serial_number], recycle=recycle)
         module._last_device_serial = serial_number
-        module._last_test_nodeid = nodeid
         module._last_repeat_step = repeat_step
         log.debug(f"Device enabled and ready")
     except Exception as e:
