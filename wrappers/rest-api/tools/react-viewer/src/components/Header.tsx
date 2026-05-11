@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from '../store'
-import { APP_VERSION } from './WhatsNew'
+import { apiClient } from '../api'
 
 interface WhatsNewModalProps {
   isOpen: boolean
@@ -8,6 +8,24 @@ interface WhatsNewModalProps {
 }
 
 function AboutModal({ isOpen, onClose }: WhatsNewModalProps) {
+  const [sdkVersion, setSdkVersion] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    let cancelled = false
+    apiClient
+      .getHealth()
+      .then((h) => {
+        if (!cancelled) setSdkVersion(h.sdk_version || 'unknown')
+      })
+      .catch(() => {
+        if (!cancelled) setSdkVersion('unknown')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
 
   return (
@@ -31,8 +49,8 @@ function AboutModal({ isOpen, onClose }: WhatsNewModalProps) {
         {/* Content */}
         <div className="p-6 space-y-4">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-400">Version</span>
-            <span className="text-white font-mono">{APP_VERSION}</span>
+            <span className="text-gray-400">librealsense SDK</span>
+            <span className="text-white font-mono">{sdkVersion ?? '…'}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">License</span>

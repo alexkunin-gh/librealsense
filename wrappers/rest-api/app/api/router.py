@@ -4,13 +4,32 @@
 from fastapi import APIRouter
 from app.api.endpoints import devices, sensors, options, streams, webrtc, point_cloud, firmware, sensor_streaming
 
+
+def _get_sdk_version() -> str:
+    """Return the installed pyrealsense2/librealsense SDK version, or 'unknown' if not resolvable."""
+    try:
+        from importlib.metadata import version, PackageNotFoundError
+        try:
+            return version("pyrealsense2")
+        except PackageNotFoundError:
+            return "unknown"
+    except Exception:
+        return "unknown"
+
+
+_SDK_VERSION = _get_sdk_version()
+
 api_router = APIRouter()
 
 # Health check endpoint
 @api_router.get("/health")
 async def health_check():
-    """Health check endpoint for monitoring the backend service."""
-    return {"status": "ok", "service": "realsense-api"}
+    """Health check endpoint for monitoring the backend service.
+
+    Returns the installed RealSense SDK version so the frontend can show a
+    welcome banner the first time the user opens it on a new SDK version.
+    """
+    return {"status": "ok", "service": "realsense-api", "sdk_version": _SDK_VERSION}
 
 # Register firmware routes before devices to avoid conflicts with /{device_id} catch-all
 api_router.include_router(firmware.router, prefix="/devices", tags=["firmware"])
