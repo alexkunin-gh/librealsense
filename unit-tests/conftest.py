@@ -151,7 +151,7 @@ def pytest_addoption(parser):
         default=0,
         type=int,
         dest="repeat_count",
-        help="Repeat each test N times (alias for pytest-repeat's --count)."
+        help="Run all tests in each file N times (module-scoped alias for pytest-repeat's --count). Use --count for per-test repetition."
     )
     # --debug and -r/--regex conflict with pytest built-ins and are consumed before
     # pytest parses args. Document them here so they show up in --help:
@@ -185,10 +185,12 @@ def pytest_configure(config):
     if tag_value and not config.option.markexpr:
         config.option.markexpr = tag_value
 
-    # --repeat N → pytest-repeat's --count N (only if --count wasn't explicitly set)
+    # --repeat N → pytest-repeat's --count N + module scope (only if --count wasn't explicitly set).
+    # Using --repeat (our alias) always runs the full file N times; use --count for per-test repetition.
     repeat_val = config.getoption('repeat_count', default=0)
     if repeat_val and config.getoption('count', default=1) <= 1:
         config.option.count = repeat_val
+        config.option.repeat_scope = 'module'
 
     # Parse and store context
     context_str = config.getoption("--context", default="")
@@ -482,14 +484,22 @@ def module_device_setup(request):
     last_device = getattr(module, '_last_device_serial', None)
     last_test = getattr(module, '_last_test_nodeid', None)
     is_retry = (last_test == nodeid)
-    is_repeat = request.config.getoption("count", default=1) > 1
     device_changed = (last_device is not None and last_device != serial_number)
     first_setup = (last_device is None)
-    recycle = not no_reset and (first_setup or device_changed or is_retry or is_repeat)
+
+    # Detect the start of a new module-scoped repeat pass.
+    # pytest-repeat parametrizes __pytest_repeat_step_number (0-based); recycle when it advances.
+    callspec = getattr(request.node, 'callspec', None)
+    repeat_step = callspec.params.get('__pytest_repeat_step_number') if callspec else None
+    last_repeat_step = getattr(module, '_last_repeat_step', None)
+    is_new_repeat_pass = repeat_step is not None and last_repeat_step is not None and repeat_step != last_repeat_step
+
+    recycle = not no_reset and (first_setup or device_changed or is_retry or is_new_repeat_pass)
 
     if not recycle and not first_setup:
         log.debug(f"Device {serial_number} already enabled, skipping hub setup")
         module._last_test_nodeid = nodeid
+        module._last_repeat_step = repeat_step
         yield serial_number
         return
 
@@ -498,6 +508,7 @@ def module_device_setup(request):
         devices.enable_only([serial_number], recycle=recycle)
         module._last_device_serial = serial_number
         module._last_test_nodeid = nodeid
+        module._last_repeat_step = repeat_step
         log.debug(f"Device enabled and ready")
     except Exception as e:
         pytest.fail(f"Failed to enable device {serial_number}: {e}")
