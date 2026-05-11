@@ -46,13 +46,23 @@ def _wait_for_reconnect( timeout ):
     return False
 
 
-def test_advanced_mode_toggle( test_device ):
+def test_advanced_mode_toggle( _test_device_serial, test_context ):
     global dev, target_sn, device_added
     device_added = False
 
-    dev, ctx = test_device
-    target_sn = dev.get_info( rs.camera_info.serial_number )
+    # Bind strictly to the parametrized serial — never operate on a different
+    # device, even if test_context happens to list more than one.
+    target_sn = _test_device_serial
+    ctx = test_context
+    dev = next(
+        ( d for d in ctx.devices
+          if d.supports( rs.camera_info.serial_number )
+          and d.get_info( rs.camera_info.serial_number ) == target_sn ),
+        None )
+    if dev is None:
+        pytest.fail( f"Parametrized device {target_sn} not visible in context" )
     name = dev.get_info( rs.camera_info.name )
+    log.debug( "Test using device: %s [%s]", name, target_sn )
 
     try:
         am_dev = rs.rs400_advanced_mode( dev )
