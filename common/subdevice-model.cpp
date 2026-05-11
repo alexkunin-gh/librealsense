@@ -196,8 +196,7 @@ namespace rs2
                 [block]( rs2::frame f ) { return block->process( f ); },
                 error_message, false );
 
-            // D405 (0B5B): very short baseline, not compatible with MinZ algorithm
-            // D401 (ABCC): GMSL variant, not validated for MinZ
+            // D405 (0B5B) and D401 (ABCC): very short baseline, not compatible with MinZ algorithm
             static constexpr const char * PID_D405 = "0B5B";
             static constexpr const char * PID_D401 = "ABCC";
 

@@ -90,9 +90,9 @@ rs2::frame min_z_depth_improver::run( rs2::frameset            original_fs,
     auto const * raw = reinterpret_cast< const uint16_t * >( depth.get_data() );
 
     // DepthRangeImprover expects depth in mm (1 unit = 1 mm).
-    // For the standard D4xx depth_units=0.001 case raw values are already in mm —
-    // pass the frame buffer directly.  Only convert (and reuse the member scratch
-    // buffer to avoid per-frame allocation) when depth_units is non-standard.
+    // The standard D4xx depth_units=0.001 m/unit means raw values are already in mm,
+    // so pass the frame buffer directly.
+    // For non-standard depth_units, convert each pixel from camera units to mm first.
     const uint16_t * depth_input = raw;
     if( ! is_1mm )
     {
@@ -103,16 +103,7 @@ rs2::frame min_z_depth_improver::run( rs2::frameset            original_fs,
         depth_input = _depth_mm_buf.data();
     }
 
-    _out_buf.resize( w * h );
-
     auto meta = FrameMetadata::from_rs2_frameset( original_fs );
-
-    _impl->process(
-        reinterpret_cast< const uint8_t * >( ir_left.get_data() ),
-        reinterpret_cast< const uint8_t * >( ir_right.get_data() ),
-        depth_input,
-        _out_buf.data(),
-        meta );
 
     auto new_frame = src.allocate_video_frame(
         depth.get_profile(), depth, 0, w, h, 0, RS2_EXTENSION_DEPTH_FRAME );
@@ -122,13 +113,23 @@ rs2::frame min_z_depth_improver::run( rs2::frameset            original_fs,
     // get_data() returns const void* even for newly-allocated frames;
     // exclusive ownership from allocate_video_frame above makes the write safe.
     auto * dst = reinterpret_cast< uint16_t * >( const_cast< void * >( new_frame.get_data() ) );
-    if( is_1mm )
-        std::memcpy( dst, _out_buf.data(), w * h * sizeof( uint16_t ) );
-    else
+
+    _impl->process(
+        reinterpret_cast< const uint8_t * >( ir_left.get_data() ),
+        reinterpret_cast< const uint8_t * >( ir_right.get_data() ),
+        depth_input,
+        dst,
+        meta );
+
+    // MinZ output is in mm; convert back to the camera's original depth units so the
+    // frame handed to the user has the same unit convention as any other depth frame.
+    // (The user's downstream code — e.g. depth_frame::get_distance() — will multiply
+    // by depth_units again when it needs metres or mm.)
+    if( ! is_1mm )
     {
         float inv = 1.f / scale_mm;
         for( int i = 0; i < w * h; ++i )
-            dst[i] = static_cast< uint16_t >( _out_buf[i] * inv );
+            dst[i] = static_cast< uint16_t >( dst[i] * inv );
     }
 
     return new_frame;

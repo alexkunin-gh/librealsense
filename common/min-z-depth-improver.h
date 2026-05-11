@@ -20,8 +20,8 @@ namespace rs_depth {
 // When BUILD_WITH_MINZ is not defined apply() is a no-op pass-through.
 //
 // Threading: apply() must be called from a single thread (the viewer render loop).
-// The scratch buffers (_out_buf, _depth_mm_buf, _replace_buf) are not protected by
-// a mutex; concurrent calls would race on them.
+// The scratch buffers (_depth_mm_buf, _replace_buf) are not protected by a mutex;
+// concurrent calls would race on them.
 class min_z_depth_improver
 {
 public:
@@ -50,7 +50,6 @@ private:
                               rs2::frame_source const & src );
 
     std::unique_ptr< rs_depth::DepthRangeImprover > _impl;
-    std::vector< uint16_t >  _out_buf;
     std::vector< uint16_t >  _depth_mm_buf;
     std::vector< rs2::frame > _replace_buf;
     int _init_width  = 0;
