@@ -40,7 +40,7 @@ function AboutModal({ isOpen, onClose }: WhatsNewModalProps) {
           </div>
           <div className="pt-2 border-t border-gray-700">
             <p className="text-gray-400 text-sm">
-              A modern React-based web UI for Intel RealSense cameras, 
+              A modern React-based web UI for RealSense Cameras, 
               leveraging the REST API backend for device control and streaming.
             </p>
           </div>
@@ -49,7 +49,7 @@ function AboutModal({ isOpen, onClose }: WhatsNewModalProps) {
         {/* Footer */}
         <div className="px-6 py-4 bg-gray-800/50 flex justify-between items-center">
           <a 
-            href="https://github.com/IntelRealSense/librealsense" 
+            href="https://github.com/realsenseai/librealsense" 
             target="_blank" 
             rel="noopener noreferrer"
             className="text-sm text-rs-blue hover:text-blue-400 transition-colors"

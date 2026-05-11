@@ -1,6 +1,6 @@
 # RealSense React Viewer
 
-A modern React-based web UI for Intel RealSense cameras, leveraging the REST API backend.
+A modern React-based web UI for RealSense Cameras, leveraging the REST API backend.
 
 ## Features
 
