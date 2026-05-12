@@ -61,7 +61,7 @@ namespace librealsense
         auto n = width * height;
         assert(n % 16 == 0); // All currently supported color resolutions are multiples of 16 pixels. Could easily extend support to other resolutions by copying final n<16 pixels into a zero-padded buffer and recursively calling self for final iteration.
 #ifdef RS2_USE_CUDA
-        if (rsutils::rs2_is_gpu_available())
+        if (rsutils::rs2_is_cuda_available())
         {
             rscuda::unpack_yuy2_cuda<FORMAT>(d, s, n);
             return;
@@ -1309,7 +1309,7 @@ namespace librealsense
 
         // Time measurments on Jetson yielded better results for the non-CUDA version
     //#ifdef RS2_USE_CUDA
-        //if( rsutils::rs2_is_gpu_available() )
+        //if( rsutils::rs2_is_cuda_available() )
         //    rscuda::uyvy_to_yuyv_cuda_helper( in, out, width * height );
     //#else
         for( size_t i = 0; i < width * height; ++i )

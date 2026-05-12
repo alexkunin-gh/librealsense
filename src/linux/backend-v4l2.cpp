@@ -899,7 +899,7 @@ namespace librealsense
             if (!is_usb_path_valid(video_path, dev_name, busnum, devnum, devpath))
             {
 #ifndef RS2_USE_CUDA
-                if (rsutils::rs2_is_gpu_available())
+                if (rsutils::rs2_is_cuda_available())
                 {
                     /* On the Jetson TX, the camera module is CSI & I2C and does not report as this code expects
                     Patch suggested by JetsonHacks: https://github.com/jetsonhacks/buildLibrealsense2TX */
