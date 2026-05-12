@@ -33,6 +33,14 @@ namespace rsutils {
     // Calling convention: CUDA's CUDAAPI macro is __stdcall on 32-bit Windows and is
     // a no-op on x64 Windows / POSIX.  Wrong convention on x86 would corrupt the
     // stack across the call.
+    //
+    // Not unit-tested directly: probe_cuda_driver() is static, its result is captured
+    // in a magic-static cache on first call, and it talks to the live OS driver.
+    // Mocking would require dependency injection of cuInit/cuDeviceGetCount pointers
+    // through the public API, which is too much surface for a one-shot probe.  Coverage
+    // comes from CI smoke tests on the Jetson runners (positive: driver+device present)
+    // and on x86 / Windows CI agents without an NVIDIA driver (negative: dlopen returns
+    // NULL).
     static bool probe_cuda_driver()
     {
 #ifdef _WIN32
@@ -59,10 +67,16 @@ namespace rsutils {
         auto cu_count = reinterpret_cast< cu_device_count_t >( dlsym( handle, "cuDeviceGetCount" ) );
 #endif
 
-        int count = 0;
-        bool init_ok       = cu_init && cu_init( 0 ) == 0;
-        bool count_ok      = init_ok && cu_count && cu_count( &count ) == 0;
-        bool have_device   = count_ok && count > 0;
+        // Sentinel -1 marks "call not made yet" so the diagnostic below can
+        // distinguish a missing symbol from a non-zero CUresult.
+        int init_rc  = -1;
+        int count_rc = -1;
+        int count    = 0;
+
+        if( cu_init )
+            init_rc = cu_init( 0 );
+        if( init_rc == 0 && cu_count )
+            count_rc = cu_count( &count );
 
 #ifdef _WIN32
         FreeLibrary( handle );
@@ -70,12 +84,18 @@ namespace rsutils {
         dlclose( handle );
 #endif
 
+        bool have_device = ( init_rc == 0 && count_rc == 0 && count > 0 );
+
         if( have_device )
             LOG_INFO( "CUDA driver detected with " << count << " visible device(s) - GPU acceleration available." );
-        else if( ! init_ok )
-            LOG_INFO( "CUDA driver library loaded but cuInit failed - GPU acceleration unavailable." );
-        else if( ! count_ok )
-            LOG_INFO( "CUDA driver initialised but cuDeviceGetCount failed - GPU acceleration unavailable." );
+        else if( ! cu_init )
+            LOG_INFO( "CUDA driver loaded but cuInit symbol not found - GPU acceleration unavailable." );
+        else if( init_rc != 0 )
+            LOG_INFO( "cuInit returned CUresult " << init_rc << " - GPU acceleration unavailable." );
+        else if( ! cu_count )
+            LOG_INFO( "CUDA driver initialised but cuDeviceGetCount symbol not found - GPU acceleration unavailable." );
+        else if( count_rc != 0 )
+            LOG_INFO( "cuDeviceGetCount returned CUresult " << count_rc << " - GPU acceleration unavailable." );
         else
             LOG_INFO( "CUDA driver initialised but zero visible devices - GPU acceleration unavailable." );
         return have_device;
