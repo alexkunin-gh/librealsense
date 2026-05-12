@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 
 # Disabled until we stabilize the lab (was #test:donotrun in the legacy directive form).
 pytestmark = [
+    pytest.mark.skip(reason="temporarily disabled"),
     pytest.mark.context("calibration"),
     pytest.mark.device_each("D400*"),
     pytest.mark.device_exclude("D555"),
