@@ -67,10 +67,14 @@ class TestCliOptionsRegistered:
         assert rc == 0
 
     def test_retries(self):
-        """--retries 1 should retry a failed test and recycle the device on retry."""
+        """--retries 1 should rerun the entire module on failure, recycling the device."""
         rc, out, tracking = run_e2e("pytest-retry.py", "--retries", "1")
-        assert_outcomes(out, passed=1)
+        # Pass 0: test_always_passes PASSED, test_fails_then_passes FAILED
+        # Pass 1 (retry): device recycled, both tests rerun → both PASSED
+        # pytest-repeat reports: 3 passed (2 from pass 1 + 1 from pass 0 survivor), 1 failed (pass 0)
+        assert_outcomes(out, passed=3, failed=1)
         calls = tracking["enable_only_calls"]
+        # Two enable_only calls: initial setup (pass 0) + recycle (pass 1 = new repeat pass)
         assert len(calls) == 2
         assert all(c['recycle'] is True for c in calls)
 
