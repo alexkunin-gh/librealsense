@@ -83,7 +83,6 @@ namespace rsutils {
 
     bool rs2_is_cuda_available()
     {
-        // C++11 magic statics: thread-safe one-time init, probe runs once per process.
         static bool const cached = probe_cuda_driver();
         return cached;
     }
