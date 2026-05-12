@@ -861,14 +861,14 @@ namespace rs2
 
         // NVIDIA Jetson: hint the user when the viewer cannot benefit from CUDA acceleration.
         // /etc/nv_tegra_release is the canonical L4T marker for Jetson platforms.
-        // Compile-time (RS2_USE_CUDA) and runtime (rs2_is_gpu_available) are kept separate:
+        // Compile-time (RS2_USE_CUDA) and runtime (rs2_is_cuda_available) are kept separate:
         // a CUDA-enabled build whose runtime fails to initialize (e.g. broken/mismatched CUDA
         // stack) must not be told to "rebuild with CUDA" — the real problem is at runtime.
         if (std::ifstream("/etc/nv_tegra_release").good())
         {
 #ifdef RS2_USE_CUDA
             // Built with CUDA. If the runtime cannot enumerate a GPU, surface a runtime-stack hint.
-            if (!rsutils::rs2_is_gpu_available())
+            if (!rsutils::rs2_is_cuda_available())
             {
                 std::string message = "Running on NVIDIA Jetson and realsense-viewer was built with CUDA,\n"
                     "but the CUDA runtime failed to initialize (no GPU device reported).\n"
