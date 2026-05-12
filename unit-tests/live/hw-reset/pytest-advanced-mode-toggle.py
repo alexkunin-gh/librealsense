@@ -46,23 +46,13 @@ def _wait_for_reconnect( timeout ):
     return False
 
 
-def test_advanced_mode_toggle( _test_device_serial, test_context ):
+def test_advanced_mode_toggle( test_device ):
     global dev, target_sn, device_added
     device_added = False
 
-    # Bind strictly to the parametrized serial — never operate on a different
-    # device, even if test_context happens to list more than one.
-    target_sn = _test_device_serial
-    ctx = test_context
-    dev = next(
-        ( d for d in ctx.devices
-          if d.supports( rs.camera_info.serial_number )
-          and d.get_info( rs.camera_info.serial_number ) == target_sn ),
-        None )
-    if dev is None:
-        pytest.fail( f"Parametrized device {target_sn} not visible in context" )
+    dev, ctx = test_device
+    target_sn = dev.get_info( rs.camera_info.serial_number )
     name = dev.get_info( rs.camera_info.name )
-    log.debug( "Test using device: %s [%s]", name, target_sn )
 
     try:
         am_dev = rs.rs400_advanced_mode( dev )
@@ -85,16 +75,12 @@ def test_advanced_mode_toggle( _test_device_serial, test_context ):
 
             log.info( "[%d/%d] Waiting up to %d sec for device to reconnect...",
                       i, TOGGLE_ITERATIONS, TOGGLE_WAIT_TIME )
-            if not _wait_for_reconnect( TOGGLE_WAIT_TIME ):
-                msg = f"[{i}/{TOGGLE_ITERATIONS}] Device did not reconnect within {TOGGLE_WAIT_TIME} sec after toggling advanced mode"
-                log.error( msg )
-                pytest.fail( msg )
+            assert _wait_for_reconnect( TOGGLE_WAIT_TIME ), \
+                f"[{i}/{TOGGLE_ITERATIONS}] Device did not reconnect within {TOGGLE_WAIT_TIME} sec after toggling advanced mode"
 
             toggled_enabled = rs.rs400_advanced_mode( dev ).is_enabled()
-            if toggled_enabled != toggled_state:
-                msg = f"[{i}/{TOGGLE_ITERATIONS}] Expected advanced mode {'ON' if toggled_state else 'OFF'} after toggle but got {'ON' if toggled_enabled else 'OFF'}"
-                log.error( msg )
-                pytest.fail( msg )
+            assert toggled_enabled == toggled_state, \
+                f"[{i}/{TOGGLE_ITERATIONS}] Expected advanced mode {'ON' if toggled_state else 'OFF'} after toggle but got {'ON' if toggled_enabled else 'OFF'}"
             log.info( "[%d/%d] Device reconnected; advanced mode is %s",
                       i, TOGGLE_ITERATIONS, "ON" if toggled_state else "OFF" )
 
@@ -105,25 +91,20 @@ def test_advanced_mode_toggle( _test_device_serial, test_context ):
 
             log.info( "[%d/%d] Waiting up to %d sec for device to reconnect after restore...",
                       i, TOGGLE_ITERATIONS, TOGGLE_WAIT_TIME )
-            if not _wait_for_reconnect( TOGGLE_WAIT_TIME ):
-                msg = f"[{i}/{TOGGLE_ITERATIONS}] Device did not reconnect within {TOGGLE_WAIT_TIME} sec after restoring advanced mode"
-                log.error( msg )
-                pytest.fail( msg )
+            assert _wait_for_reconnect( TOGGLE_WAIT_TIME ), \
+                f"[{i}/{TOGGLE_ITERATIONS}] Device did not reconnect within {TOGGLE_WAIT_TIME} sec after restoring advanced mode"
 
             am_dev = rs.rs400_advanced_mode( dev )
             restored_enabled = am_dev.is_enabled()
-            if restored_enabled != initial_state:
-                msg = f"[{i}/{TOGGLE_ITERATIONS}] Expected advanced mode {'ON' if initial_state else 'OFF'} after restore but got {'ON' if restored_enabled else 'OFF'}"
-                log.error( msg )
-                pytest.fail( msg )
+            assert restored_enabled == initial_state, \
+                f"[{i}/{TOGGLE_ITERATIONS}] Expected advanced mode {'ON' if initial_state else 'OFF'} after restore but got {'ON' if restored_enabled else 'OFF'}"
             log.info( "[%d/%d] Advanced mode restored to %s", i, TOGGLE_ITERATIONS, "ON" if initial_state else "OFF" )
 
     finally:
         # Best-effort restore initial state so later tests in the session are not affected
         try:
             if dev and rs.rs400_advanced_mode( dev ).is_enabled() != initial_state:
-                log.info( "Test failed mid-iteration; restoring advanced mode to %s before exit",
-                          "ON" if initial_state else "OFF" )
+                log.info( "Restoring advanced mode to %s", "ON" if initial_state else "OFF" )
                 device_added = False
                 rs.rs400_advanced_mode( dev ).toggle_advanced_mode( initial_state )
 
