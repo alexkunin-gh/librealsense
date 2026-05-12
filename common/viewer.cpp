@@ -906,7 +906,7 @@ namespace rs2
                     "but realsense-viewer is not using CUDA.\n"
                     "For better performance, rebuild librealsense with -DBUILD_WITH_CUDA=ON.";
                 auto n = not_model->add_notification({ message,
-                     RS2_LOG_SEVERITY_WARN,
+                     RS2_LOG_SEVERITY_INFO,
                      RS2_NOTIFICATION_CATEGORY_COUNT });
                 n->enable_complex_dismiss = true;
                 n->delay_id = "jetson-cuda-not-used";
