@@ -33,6 +33,9 @@ rs2::frame min_z_depth_improver::apply( rs2::frame f, rs2::frame_source const & 
 
     int w = ir_left.get_width();
     int h = ir_left.get_height();
+    if( depth.get_width() != w || depth.get_height() != h )
+        return f;  // depth and IR must be the same resolution; mismatched config is unsupported
+
     if( ! _impl || w != _init_width || h != _init_height )
         if( ! init( ir_left, ir_right ) )
             return f;
