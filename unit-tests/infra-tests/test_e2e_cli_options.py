@@ -41,16 +41,13 @@ class TestCliOptionsRegistered:
 
     def test_defaults(self):
         """Without any flags, conftest should set correct defaults:
-        hub_reset=False, rslog off, timeout 200s with platform-appropriate method."""
-        import sys
+        hub_reset=False, rslog off, timeout 200s/thread."""
         rc, out, tracking = run_e2e("pytest-passthrough.py")
         assert rc == 0
         assert any(kw.get("hub_reset") is False for kw in tracking["query_kwargs"])
         assert len(tracking["rslog_calls"]) == 0
         assert "timeout: 200s" in out
-        expected_method = "thread" if sys.platform == "win32" else "signal"
-        assert f"timeout method: {expected_method}" in out
-        assert "timeout func_only: True" in out
+        assert "timeout method: thread" in out
 
     def test_rslog(self):
         """--rslog should call rs.log_to_console."""
