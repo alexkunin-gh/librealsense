@@ -35,10 +35,15 @@ with test.closure("Test DDS support"):
     new_config = get_eth_config() # Get a new config object to keep orig_config intact
 
 with test.closure("Test link timeout configuration"):
-    new_config.link.timeout *= 2
+    # Toggle between two safe in-range values (both within 2000-30000 and divisible by 100).
+    # Doubling the current value is unsafe: if the device persists a high value from a prior
+    # run, doubling it overflows the valid range and leaves the camera stuck at that value.
+    link_timeout_values = ( 8000, 10000 )
+    new_link_timeout = link_timeout_values[1] if orig_config.link.timeout == link_timeout_values[0] else link_timeout_values[0]
+    new_config.link.timeout = new_link_timeout
     set_eth_config( new_config )
     updated_config = get_eth_config()
-    test.check( updated_config.link.timeout == orig_config.link.timeout * 2 )
+    test.check( updated_config.link.timeout == new_link_timeout )
 
     if new_config.header.version >= 5:
         new_config.link.timeout = 1000
@@ -200,9 +205,10 @@ with test.closure("Test configuration failures"): # Failures depending on versio
 with test.closure("Test python wrapper functionality"):
     eth_device = rs.eth_config_device( dev )
     orig_link_timeout = eth_device.get_link_timeout()
-    eth_device.set_link_timeout( orig_link_timeout * 2 )
+    new_link_timeout = link_timeout_values[1] if orig_link_timeout == link_timeout_values[0] else link_timeout_values[0]
+    eth_device.set_link_timeout( new_link_timeout )
     updated_link_timeout = eth_device.get_link_timeout()
-    test.check( updated_link_timeout == orig_link_timeout * 2 )
+    test.check( updated_link_timeout == new_link_timeout )
     
     orig_ip, orig_actual_ip = eth_device.get_ip_address()
     eth_device.set_ip_address( rs.ip_address( 127, 0, 0, 1 ) )
