@@ -152,6 +152,8 @@ sudo make install
 
 All flags are defined in `CMake/lrs_options.cmake`.
 
+> **Rule:** When adding a new CMake build flag, always declare it with `option()` in `CMake/lrs_options.cmake` — never inline in a subdirectory `CMakeLists.txt`. This keeps all flags discoverable in one place and ensures they appear in `cmake-gui`/`ccmake` regardless of which subdirectory is being configured.
+
 | Flag | Default | Description |
 |---|---|---|
 | `BUILD_SHARED_LIBS` | ON | Build as shared library (`OFF` for static) |
@@ -173,6 +175,7 @@ All flags are defined in `CMake/lrs_options.cmake`.
 | `BUILD_RS2_ALL` | ON | Build `realsense2-all` static bundle (when `BUILD_SHARED_LIBS=OFF`) |
 | `BUILD_ASAN` | OFF | Enable AddressSanitizer |
 | `ENABLE_SECURITY_FLAGS` | OFF | Enable additional compiler security flags |
+| `BUILD_WITH_MINZ` | OFF | Enable MinZ depth improvement in viewer (Jetson only); requires `librealsense2-enhanced-depth` installed on every system that runs the binary — **do not distribute this binary to systems without the package** |
 
 ## Example: Build with Python Bindings and Tests
 
