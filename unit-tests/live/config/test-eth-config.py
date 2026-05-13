@@ -15,6 +15,12 @@ set_eth_config_opcode = 0xBA
 default_values_param = 0
 current_values_param = 1
 
+# Safe in-range link timeout values used by the toggle below: both within the 2000-30000
+# range validated by eth_config::validate() and divisible by 100. BASELINE is also used to
+# normalize units stuck at an abnormal value (e.g. 16000 from an interrupted prior run).
+LINK_TIMEOUT_BASELINE = 8000
+LINK_TIMEOUT_ALT      = 10000
+
 
 dev, ctx = test.find_first_device_or_exit()
 
@@ -34,11 +40,20 @@ with test.closure("Test DDS support"):
     orig_config = get_eth_config()
     new_config = get_eth_config() # Get a new config object to keep orig_config intact
 
+    # If the device's persisted link.timeout is outside our toggle set, overwrite it in
+    # orig_config so the final "Restore configuration" closure writes a sane value back to
+    # flash. This permanently heals units stuck at abnormal values (e.g. 16000 from prior
+    # interrupted runs) without any manual intervention.
+    if orig_config.link.timeout not in ( LINK_TIMEOUT_BASELINE, LINK_TIMEOUT_ALT ):
+        orig_config.link.timeout = LINK_TIMEOUT_BASELINE
+
 with test.closure("Test link timeout configuration"):
-    new_config.link.timeout *= 2
+    # Toggle between two safe in-range values (avoid doubling - it can overflow the 2000-30000 range).
+    new_link_timeout = LINK_TIMEOUT_BASELINE if orig_config.link.timeout != LINK_TIMEOUT_BASELINE else LINK_TIMEOUT_ALT
+    new_config.link.timeout = new_link_timeout
     set_eth_config( new_config )
     updated_config = get_eth_config()
-    test.check( updated_config.link.timeout == orig_config.link.timeout * 2 )
+    test.check( updated_config.link.timeout == new_link_timeout )
 
     if new_config.header.version >= 5:
         new_config.link.timeout = 1000
@@ -200,9 +215,10 @@ with test.closure("Test configuration failures"): # Failures depending on versio
 with test.closure("Test python wrapper functionality"):
     eth_device = rs.eth_config_device( dev )
     orig_link_timeout = eth_device.get_link_timeout()
-    eth_device.set_link_timeout( orig_link_timeout * 2 )
+    new_link_timeout = LINK_TIMEOUT_BASELINE if orig_link_timeout != LINK_TIMEOUT_BASELINE else LINK_TIMEOUT_ALT
+    eth_device.set_link_timeout( new_link_timeout )
     updated_link_timeout = eth_device.get_link_timeout()
-    test.check( updated_link_timeout == orig_link_timeout * 2 )
+    test.check( updated_link_timeout == new_link_timeout )
     
     orig_ip, orig_actual_ip = eth_device.get_ip_address()
     eth_device.set_ip_address( rs.ip_address( 127, 0, 0, 1 ) )
