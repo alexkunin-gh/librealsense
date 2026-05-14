@@ -23,13 +23,13 @@ from iq_helper import (find_roi_location, get_roi_from_frame, is_color_close,
 log = logging.getLogger(__name__)
 
 pytestmark = [
+    pytest.mark.context("image-quality"),
     pytest.mark.device_each("D400*"),
     pytest.mark.device_exclude("D401"),
     pytest.mark.timeout(1500),
 ]
 
 NUM_FRAMES = 100  # Number of frames to check
-COLOR_TOLERANCE = 60  # Acceptable per-channel deviation in RGB values
 DEPTH_TOLERANCE = 90  # Acceptable deviation from expected depth in mm
 FRAMES_PASS_THRESHOLD = 0.7  # Percentage of frames that needs to pass
 DEBUG_MODE = False
@@ -167,7 +167,7 @@ def run_test(dev, ctx, depth_resolution, depth_fps, color_resolution, color_fps)
             # Check cube color (center - should be black) — region median instead
             # of a single pixel so one noisy pixel can't flake the test.
             cube_pixel = get_median_color_from_region(color_frame_roi, cube_x, cube_y)
-            if is_color_close(cube_pixel, EXPECTED_CUBE_COLOR, COLOR_TOLERANCE):
+            if is_color_close(cube_pixel, EXPECTED_CUBE_COLOR):
                 cube_color_passes += 1
             else:
                 log.debug(f"Frame {i} - Cube color at ({cube_x},{cube_y}) sampled: {cube_pixel} too far from expected {EXPECTED_CUBE_COLOR}")
@@ -176,7 +176,7 @@ def run_test(dev, ctx, depth_resolution, depth_fps, color_resolution, color_fps)
             # paper strips at the cube's vertical midline (same BG_SAMPLE_POINTS
             # used for depth).
             bg_pixel, bg_color_readings = sample_bg_color(color_frame_roi, BG_SAMPLE_POINTS)
-            if is_color_close(bg_pixel, EXPECTED_BG_COLOR, COLOR_TOLERANCE):
+            if is_color_close(bg_pixel, EXPECTED_BG_COLOR):
                 bg_color_passes += 1
             else:
                 log.debug(f"Frame {i} - Background color sampled: {bg_pixel} too far from expected {EXPECTED_BG_COLOR} "

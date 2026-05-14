@@ -14,6 +14,7 @@ from iq_helper import (find_roi_location, get_roi_from_frame, get_median_depth_f
 log = logging.getLogger(__name__)
 
 pytestmark = [
+    pytest.mark.context("image-quality"),
     pytest.mark.device_each("D400*"),
     pytest.mark.device_exclude("D401"),
     pytest.mark.timeout(400),  # extra time for page detection
