@@ -215,6 +215,7 @@ def pytest_configure(config):
     config.addinivalue_line("python_classes", "Test*")
     config.addinivalue_line("python_functions", "test_*")
 
+    # Default timeout: 200s, thread-based (Windows-compatible)
     if not config.getoption("--timeout", default=None):
         config.option.timeout = 200
         config.option.timeout_method = "thread"
