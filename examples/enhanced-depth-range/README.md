@@ -33,7 +33,6 @@ firmware and/or SDK.
   - [DepthRangeImprover (C++)](#depthrangeimprover-c)
   - [Utilities (C++)](#utilities-c)
 - [FrameMetadata](#framemetadata)
-- [CLI Tools](#cli-tools)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -525,59 +524,6 @@ Convenience properties on `FrameMetadata` (read IR first, fall back to depth):
 
 ---
 
-## CLI Tools
-
-All CLI tools are in `/usr/bin/` and activate the correct Python environment automatically.
-
-### `rs-depth-live` — Live camera
-
-```bash
-rs-depth-live --range-depth
-rs-depth-live --range-depth --show-rgb --show-irs --show-raw-depth
-rs-depth-live --range-depth --headless --frames 100
-rs-depth-live --range-depth --crop-region 128 96 512 384    # ROI crop (384×288)
-rs-depth-live --range-depth --record /tmp/out                # record all streams
-rs-depth-live --record /tmp/calib --ir-format y16            # calibration recording (Y16 IR + color, no depth)
-rs-depth-live --record /tmp/raw --ir-format y8               # raw recording (all streams, no processing)
-```
-
-| Flag | Description |
-|------|-------------|
-| `--range-depth` | Enable close-range depth improvement |
-| `--output-unit UNIT` | `meters` (default) or `mm` |
-| `--crop-region X1 Y1 X2 Y2` | Process only this ROI; output is always full-size |
-| `--show-rgb` | Show RGB color stream |
-| `--show-irs` | Show left/right IR streams |
-| `--show-raw-depth` | Show raw hardware depth for comparison |
-| `--record DIR` | Record streams to a directory (`.bag` + calibration JSON + raw firmware blobs) |
-| `--ir-format FORMAT` | IR recording format: `y8` (default — all streams), `y16` (16-bit IR + color at 1280×800, no depth), or `y12i` (12-bit interleaved, device-dependent) |
-| `--headless` | No GUI — for benchmarking or SSH sessions |
-| `--frames N` | Stop after N frames |
-| `--width`, `--height`, `--fps` | Camera resolution and framerate |
-
-**Recording modes:**
-
-| `--ir-format` | Streams recorded | Resolution | Use case |
-|---------------|-----------------|------------|----------|
-| `y8` (default) | IR L/R (Y8) + Depth (Z16) + Color (BGR8) | User-specified | General capture, debugging, replay with processing |
-| `y16` | IR L/R (Y16) + Color (BGR8) | 1280×800 (forced) | White-balance calibration (16-bit IR dynamic range) |
-| `y12i` | IR L/R (Y12I) + Color (BGR8) | 1280×800 (forced) | Calibration (12-bit interleaved, not all devices) |
-
-All modes save calibration data alongside the `.bag`: `calibration_*.json` and raw firmware blobs (`getintcal_id25`, `getintcal_id32`, `recparamsget`).
-
-### `rs-depth-playback` — Replay .bag files
-
-```bash
-rs-depth-playback /tmp/out --range-depth
-rs-depth-playback /tmp/out --no-realtime   # process every frame without dropping
-rs-depth-playback /tmp/calib               # Y16/Y12I calibration — display only, no processing
-```
-
-Playback auto-detects IR format from the `.bag` and adjusts display accordingly.
-Controls: `q`/ESC quit · SPACE pause/resume.
-
----
-
 ## Troubleshooting
 
 ### Camera not detected
@@ -593,14 +539,5 @@ rs-enumerate-devices    # from librealsense2-utils
 
 ### No display (headless / SSH)
 
-```bash
-rs-depth-live --range-depth --headless --frames 100
-```
-
-### Check which backends are installed
-
-```python
-from rs_depth import discover_backends
-print(discover_backends())
-# BackendStatus(close-range)
-```
+Use `range_depth.py` or `range_depth.cpp` — both are headless and print per-frame
+stats to stdout. `live_minz_compare.py` requires a display.
