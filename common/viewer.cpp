@@ -3620,8 +3620,26 @@ namespace rs2
         if( ! objects )
             return;
 
-        // Require both color and depth; clear detections if either is absent
-        if( ! odf || ! cf || ! df || odf.get_detection_count() == 0 )
+        // No OD frame this tick. When OD fps < render fps this is normal (e.g. OD@15fps, RGB@30fps).
+        // Keep last known detections to avoid flicker, but clear if absent for too long (OD sensor stopped).
+        static constexpr int MAX_STALE_OD_TICKS = 10;
+        if( ! odf )
+        {
+            if( ++objects->ticks_without_od_frame > MAX_STALE_OD_TICKS )
+            {
+                std::lock_guard< std::mutex > lock( objects->mutex );
+                objects->clear();
+            }
+            return;
+        }
+        objects->ticks_without_od_frame = 0;
+
+        // OD frame arrived but depth not yet available — skip without clearing
+        if( ! df )
+            return;
+
+        // Fresh OD frame with no detections — clear
+        if( odf.get_detection_count() == 0 )
         {
             std::lock_guard< std::mutex > lock( objects->mutex );
             objects->clear();
