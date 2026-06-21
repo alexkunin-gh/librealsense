@@ -22,9 +22,6 @@ namespace librealsense
         std::shared_ptr< synthetic_sensor > create_object_detection_device( std::shared_ptr< context > ctx,
                                                                             const std::vector< platform::uvc_device_info > & od_devices_info );
 
-        void on_depth_sensor_starting() noexcept override;
-        void on_depth_sensor_stopping() noexcept override;
-
     private:
         friend class d500_object_detection_sensor;
 
@@ -50,8 +47,10 @@ namespace librealsense
         }
 
         stream_profiles init_stream_profiles() override;
+        void start( rs2_frame_callback_sptr callback ) override;
+        void stop() override;
 
     protected:
-        const d500_object_detection * _owner;
+        d500_object_detection * _owner;
     };
 }
