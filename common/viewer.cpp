@@ -2074,20 +2074,6 @@ namespace rs2
                         ImVec2 const com_screen{ unbbox.x + object.com_rel_u * unbbox.w,
                                                  unbbox.y + object.com_rel_v * unbbox.h };
                         ImGui::GetWindowDrawList()->AddCircleFilled( com_screen, 5.f, ImColor( 0.f, 1.f, 0.f, a ) );
-                        if( object.score > 0 )
-                        {
-                            std::string conf_str = rsutils::string::from() << object.score << "%";
-                            ImGui::GetWindowDrawList()->AddText(
-                                { com_screen.x + 8.f, com_screen.y - 7.f },
-                                ImColor( 0.f, 1.f, 0.f, a ),
-                                conf_str.c_str() );
-                        }
-                        std::string dist_str = rsutils::string::from()
-                            << std::setprecision( 2 ) << object.mean_depth << "m";
-                        ImGui::GetWindowDrawList()->AddText(
-                            { com_screen.x + 8.f, com_screen.y + 5.f },
-                            ImColor( 0.f, 1.f, 0.f, a ),
-                            dist_str.c_str() );
                     }
                 }
             }
