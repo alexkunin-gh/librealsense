@@ -41,6 +41,7 @@ namespace librealsense
         void set_frame_metadata_modifier( on_frame_md callback ) override;
         void open( const stream_profiles & requests ) override;
         void start( rs2_frame_callback_sptr callback ) override;
+        void stop() override;
         void close() override;
         rs2_intrinsics get_color_intrinsics( const stream_profile & profile ) const;
         stream_profiles init_stream_profiles() override;
@@ -109,6 +110,7 @@ namespace librealsense
         void hardware_reset() override;
 
         virtual void on_depth_sensor_starting() noexcept {}
+        virtual void on_depth_sensor_stopping() noexcept {}
 
         platform::usb_spec get_usb_spec() const;
         virtual double get_device_time_ms() override;

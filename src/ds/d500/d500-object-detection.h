@@ -23,6 +23,7 @@ namespace librealsense
                                                                             const std::vector< platform::uvc_device_info > & od_devices_info );
 
         void on_depth_sensor_starting() noexcept override;
+        void on_depth_sensor_stopping() noexcept override;
 
     private:
         friend class d500_object_detection_sensor;

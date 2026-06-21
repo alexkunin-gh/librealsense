@@ -186,7 +186,32 @@ namespace librealsense
     {
         if( _owner )
             _owner->on_depth_sensor_starting();
-        synthetic_sensor::start( callback );
+        try
+        {
+            synthetic_sensor::start( callback );
+        }
+        catch( ... )
+        {
+            if( _owner )
+                _owner->on_depth_sensor_stopping();
+            throw;
+        }
+    }
+
+    void d500_depth_sensor::stop()
+    {
+        try
+        {
+            synthetic_sensor::stop();
+        }
+        catch( ... )
+        {
+            if( _owner )
+                _owner->on_depth_sensor_stopping();
+            throw;
+        }
+        if( _owner )
+            _owner->on_depth_sensor_stopping();
     }
 
     void d500_depth_sensor::close()

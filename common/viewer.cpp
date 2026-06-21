@@ -25,7 +25,7 @@
 #include <rsutils/string/trim-newlines.h>
 #include <common/utilities/imgui/wrap.h>
 #include <common/labeled-point-cloud-utilities.h>
-#include "utilities/com/CenterOfMass.h"
+#include <common/utilities/com/center-of-mass.h>
 
 #include <rsutils/easylogging/easyloggingpp.h>
 #include <regex>
@@ -3686,9 +3686,9 @@ namespace rs2
 
             uint16_t const * const depth_data = reinterpret_cast< uint16_t const * >( df.get_data() );
 
-            COM::DepthImage16 com_raw{ depth_data, depth_intrin.width, depth_intrin.height };
+            com::depth_image_16 com_raw{ depth_data, depth_intrin.width, depth_intrin.height };
             std::vector< uint8_t > depth8u_buf( depth_intrin.width * depth_intrin.height );
-            COM::DepthImage8 com_depth8u{ depth8u_buf.data(), depth_intrin.width, depth_intrin.height };
+            com::depth_image_8 com_depth8u{ depth8u_buf.data(), depth_intrin.width, depth_intrin.height };
             bool depth8u_ready = false;
 
             objects_in_frame new_objects;
@@ -3762,30 +3762,35 @@ namespace rs2
 
                 // TODO: temporary fallback — viewer-side COM runs only when HKR firmware
                 // returns 0 (XU command not supported or device not ready).
+                // Checked per-detection intentionally: firmware could return 0 for individual
+                // detections (e.g. out-of-range) even when HKR COM is otherwise working.
                 // Remove once HKR COM is fully implemented and reliable on all devices.
                 if( hkr_depth_m == 0.f )
                 {
                     if( !depth8u_ready )
                     {
-                        COM::CenterOfMassCalculator::CreateDepth8U( com_raw, com_depth8u );
+                        com::center_of_mass_calculator::create_depth_8u( com_raw, com_depth8u );
                         depth8u_ready = true;
                     }
-                    COM::Rect  com_bbox{ int( depth_bbox.x ), int( depth_bbox.y ),
-                                         int( depth_bbox.w ), int( depth_bbox.h ) };
-                    COM::Vec2f com_center{ depth_bbox.x + depth_bbox.w * 0.5f,
+                    int const com_x = int( depth_bbox.x );
+                    int const com_y = int( depth_bbox.y );
+                    com::rect  com_bbox{ com_x, com_y,
+                                         int( depth_bbox.x + depth_bbox.w + 0.5f ) - com_x,
+                                         int( depth_bbox.y + depth_bbox.h + 0.5f ) - com_y };
+                    com::vec2f com_center{ depth_bbox.x + depth_bbox.w * 0.5f,
                                            depth_bbox.y + depth_bbox.h * 0.5f };
-                    COM::CameraIntrinsics com_intrin{ depth_intrin.fx, depth_intrin.fy,
-                                                      depth_intrin.ppx, depth_intrin.ppy };
-                    COM::PersonCenterOfMass com_result{};
-                    COM::CenterOfMassCalculator::Calculate( com_raw, com_depth8u, com_bbox, com_center, &com_intrin, com_result );
-                    if( com_result.meanBodyDepth > 0.f )
+                    com::camera_intrinsics com_intrin{ depth_intrin.fx, depth_intrin.fy,
+                                                       depth_intrin.ppx, depth_intrin.ppy };
+                    com::person_center_of_mass com_result{};
+                    com::center_of_mass_calculator::calculate( com_raw, com_depth8u, com_bbox, com_center, &com_intrin, com_result );
+                    if( com_result.mean_body_depth > 0.f )
                     {
-                        viewer_depth_m = com_result.meanBodyDepth / 1000.f;
+                        viewer_depth_m = com_result.mean_body_depth / 1000.f;
                         if( depth_bbox_full.w > 0.f && depth_bbox_full.h > 0.f )
                         {
                             auto clamp01 = []( float v ) { return v < 0.f ? 0.f : v > 1.f ? 1.f : v; };
-                            com_rel_u = clamp01( ( com_result.imagePos.x - depth_bbox_full.x ) / depth_bbox_full.w );
-                            com_rel_v = clamp01( ( com_result.imagePos.y - depth_bbox_full.y ) / depth_bbox_full.h );
+                            com_rel_u = clamp01( ( com_result.image_pos.x - depth_bbox_full.x ) / depth_bbox_full.w );
+                            com_rel_v = clamp01( ( com_result.image_pos.y - depth_bbox_full.y ) / depth_bbox_full.h );
                         }
                     }
                 }

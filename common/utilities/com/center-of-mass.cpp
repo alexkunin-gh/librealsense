@@ -1,18 +1,18 @@
 // License: Apache 2.0. See LICENSE file in root directory.
-// Copyright(c) 2024 Intel Corporation. All Rights Reserved.
+// Copyright(c) 2026 RealSense, Inc. All Rights Reserved.
 
-#include "CenterOfMass.h"
+#include <common/utilities/com/center-of-mass.h>
 #include <cmath>
 #include <algorithm>
 #include <vector>
 
-namespace COM {
+namespace com {
 
 // ---------------------------------------------------------------------------
 // Internal constants
 // ---------------------------------------------------------------------------
 
-static constexpr uint16_t SUBTRACT_FROM_DEPTH  = 400;  // depths below this map to depth8U=0
+static constexpr uint16_t SUBTRACT_FROM_DEPTH  = 400;  // depths below this map to depth_8u=0
 static constexpr float    SCALE_DEPTH          = 20.0f;
 static constexpr int      MIN_DEPTH            = 400;
 static constexpr int      MAX_DEPTH            = 8000;
@@ -22,7 +22,7 @@ static constexpr int      NUM_DEPTH_SAMPLES    = 5;
 static constexpr int      MAX_DEPTH_FOR_SAMPLES = 650;
 static constexpr int      MAX_STD_DEPTH_SAMPLES = 450;
 
-// depth8U value for MAX_DEPTH_FOR_BLOB (4500 mm): ceil((4500-400)/20) = 205
+// depth_8u value for MAX_DEPTH_FOR_BLOB (4500 mm): ceil((4500-400)/20) = 205
 static const int MaxDepth8U =
     (int)std::ceil((4500 - (int)SUBTRACT_FROM_DEPTH) / SCALE_DEPTH);
 
@@ -30,7 +30,7 @@ static const int MaxDepth8U =
 // 3D helpers (used only when intrinsics != nullptr)
 // ---------------------------------------------------------------------------
 
-static Vec3f PixelToCamera(Vec2i pixel, float depth_mm, const CameraIntrinsics& K)
+static vec3f pixel_to_camera(vec2i pixel, float depth_mm, const camera_intrinsics& K)
 {
     return {
         (pixel.x - K.cx) * depth_mm / K.fx,
@@ -40,10 +40,10 @@ static Vec3f PixelToCamera(Vec2i pixel, float depth_mm, const CameraIntrinsics& 
 }
 
 // ---------------------------------------------------------------------------
-// CreateDepth8U
+// create_depth_8u
 // ---------------------------------------------------------------------------
 
-void CenterOfMassCalculator::CreateDepth8U(const DepthImage16& depth, DepthImage8& result)
+void center_of_mass_calculator::create_depth_8u(const depth_image_16& depth, depth_image_8& result)
 {
     int len = depth.width * depth.height;
     if (!depth.data || len == 0) return;
@@ -58,13 +58,13 @@ void CenterOfMassCalculator::CreateDepth8U(const DepthImage16& depth, DepthImage
 }
 
 // ---------------------------------------------------------------------------
-// getMeanSurroundingDepth
+// get_mean_surrounding_depth
 // ---------------------------------------------------------------------------
 
-int CenterOfMassCalculator::getMeanSurroundingDepth(
-    const DepthImage16& depth, Vec2i pt,
-    int interval, int minRange, int maxRange,
-    float fractionNonZero, int maxRangeSurrounding)
+int center_of_mass_calculator::get_mean_surrounding_depth(
+    const depth_image_16& depth, vec2i pt,
+    int interval, int min_range, int max_range,
+    float fraction_non_zero, int max_range_surrounding)
 {
     if (depth.width == 0 || depth.height == 0) return 0;
     if (interval > 5) interval = 5;  // MAX_WINDOW sized for interval <= 5 (11×11 = 121)
@@ -82,11 +82,11 @@ int CenterOfMassCalculator::getMeanSurroundingDepth(
     for (int y = minY; y <= maxY; ++y)
         for (int x = minX; x <= maxX; ++x) {
             int v = (int)depth.data[y * depth.width + x];
-            vals[nVals++] = (v > minRange && v < maxRange) ? v : 0;
+            vals[nVals++] = (v > min_range && v < max_range) ? v : 0;
         }
 
     int windowSz   = (2 * interval + 1) * (2 * interval + 1);
-    int minPixels  = (int)(fractionNonZero * windowSz);
+    int minPixels  = (int)(fraction_non_zero * windowSz);
     int numNonZero = 0;
     for (int i = 0; i < nVals; ++i) if (vals[i] > 0) ++numNonZero;
     if (numNonZero < minPixels) return 0;
@@ -97,55 +97,55 @@ int CenterOfMassCalculator::getMeanSurroundingDepth(
     if (cnt == 0) return 0;
     int meanTemp = (int)(sum / cnt);
 
-    // Second-pass mean within ±maxRangeSurrounding
-    int minVal = std::max(meanTemp - maxRangeSurrounding, minRange + 1);
-    int maxVal = std::min(meanTemp + maxRangeSurrounding, maxRange - 1);
+    // Second-pass mean within ±max_range_surrounding
+    int minVal = std::max(meanTemp - max_range_surrounding, min_range + 1);
+    int maxVal = std::min(meanTemp + max_range_surrounding, max_range - 1);
     sum = 0; cnt = 0;
     for (int i = 0; i < nVals; ++i) if (vals[i] >= minVal && vals[i] <= maxVal) { sum += vals[i]; ++cnt; }
     return cnt > 0 ? (int)(sum / cnt) : 0;
 }
 
 // ---------------------------------------------------------------------------
-// GetDepthAtColorPixel
+// get_depth_at_color_pixel
 // With aligned depth the color pixel IS the depth pixel.
 // ---------------------------------------------------------------------------
 
-int CenterOfMassCalculator::GetDepthAtColorPixel(
-    const DepthImage16& depth, Vec2f colorPt)
+int center_of_mass_calculator::get_depth_at_color_pixel(
+    const depth_image_16& depth, vec2f color_pt)
 {
-    Vec2i pt = {(int)(colorPt.x + 0.5f), (int)(colorPt.y + 0.5f)};
+    vec2i pt = {(int)(color_pt.x + 0.5f), (int)(color_pt.y + 0.5f)};
     pt.x = std::max(0, std::min(pt.x, depth.width  - 1));
     pt.y = std::max(0, std::min(pt.y, depth.height - 1));
-    return getMeanSurroundingDepth(depth, pt, 5, 0, NO_DEPTH);
+    return get_mean_surrounding_depth(depth, pt, 5, 0, NO_DEPTH);
 }
 
 // ---------------------------------------------------------------------------
-// ClampRectToImage
+// clamp_rect_to_image
 // With aligned depth the color bbox is already in depth image space.
 // ---------------------------------------------------------------------------
 
-Rect CenterOfMassCalculator::ClampRectToImage(
-    const Rect& rect, int imgWidth, int imgHeight)
+rect center_of_mass_calculator::clamp_rect_to_image(
+    const rect& r, int img_width, int img_height)
 {
-    Rect out;
-    out.x = std::max(0, rect.x);
-    out.y = std::max(0, rect.y);
-    int x2 = std::min(rect.x + rect.width,  imgWidth)  - 1;
-    int y2 = std::min(rect.y + rect.height, imgHeight) - 1;
+    rect out;
+    out.x = std::max(0, r.x);
+    out.y = std::max(0, r.y);
+    int x2 = std::min(r.x + r.width,  img_width)  - 1;
+    int y2 = std::min(r.y + r.height, img_height) - 1;
     out.width  = std::max(0, x2 - out.x + 1);
     out.height = std::max(0, y2 - out.y + 1);
     return out;
 }
 
 // ---------------------------------------------------------------------------
-// CalcHistRangeMean
+// calc_hist_range_mean
 // ---------------------------------------------------------------------------
 
-float CenterOfMassCalculator::CalcHistRangeMean(
-    const std::vector<float>& hist, int rangeStart, int rangeEnd)
+float center_of_mass_calculator::calc_hist_range_mean(
+    const std::vector<float>& hist, int range_start, int range_end)
 {
     float sumEl = 0, numEl = 0;
-    for (int i = rangeStart; i <= rangeEnd; ++i) {
+    for (int i = range_start; i <= range_end; ++i) {
         sumEl += hist[i] * i;
         numEl += hist[i];
     }
@@ -153,35 +153,35 @@ float CenterOfMassCalculator::CalcHistRangeMean(
 }
 
 // ---------------------------------------------------------------------------
-// CalcCenterOfMask
+// calc_center_of_mask
 // ---------------------------------------------------------------------------
 
-bool CenterOfMassCalculator::CalcCenterOfMask(
-    const std::vector<uint8_t>& mask, int maskWidth, int maskHeight, Vec2i& com)
+bool center_of_mass_calculator::calc_center_of_mask(
+    const std::vector<uint8_t>& mask, int mask_width, int mask_height, vec2i& com)
 {
     int sumAll = 0;
     for (uint8_t v : mask) if (v) ++sumAll;
     if (sumAll == 0) return false;
     int halfNum = (sumAll + 1) / 2;
 
-    std::vector<int> projX(maskWidth, 0);
-    for (int y = 0; y < maskHeight; ++y)
-        for (int x = 0; x < maskWidth; ++x)
-            if (mask[y * maskWidth + x]) projX[x]++;
+    std::vector<int> projX(mask_width, 0);
+    for (int y = 0; y < mask_height; ++y)
+        for (int x = 0; x < mask_width; ++x)
+            if (mask[y * mask_width + x]) projX[x]++;
 
-    int acc = 0; com.x = maskWidth - 1;
-    for (int x = 0; x < maskWidth; ++x) {
+    int acc = 0; com.x = mask_width - 1;
+    for (int x = 0; x < mask_width; ++x) {
         acc += projX[x];
         if (acc > halfNum) { com.x = x; break; }
     }
 
-    std::vector<int> projY(maskHeight, 0);
-    for (int y = 0; y < maskHeight; ++y)
-        for (int x = 0; x < maskWidth; ++x)
-            if (mask[y * maskWidth + x]) projY[y]++;
+    std::vector<int> projY(mask_height, 0);
+    for (int y = 0; y < mask_height; ++y)
+        for (int x = 0; x < mask_width; ++x)
+            if (mask[y * mask_width + x]) projY[y]++;
 
-    acc = 0; com.y = maskHeight - 1;
-    for (int y = 0; y < maskHeight; ++y) {
+    acc = 0; com.y = mask_height - 1;
+    for (int y = 0; y < mask_height; ++y) {
         acc += projY[y];
         if (acc > halfNum) { com.y = y; break; }
     }
@@ -189,12 +189,12 @@ bool CenterOfMassCalculator::CalcCenterOfMask(
 }
 
 // ---------------------------------------------------------------------------
-// CalculateComWithDepthRange
+// calculate_com_with_depth_range
 // ---------------------------------------------------------------------------
 
-bool CenterOfMassCalculator::CalculateComWithDepthRange(
-    const DepthImage8& depth8U,
-    const Rect& roi, float& depthMean, Vec2i& centerMassPoint)
+bool center_of_mass_calculator::calculate_com_with_depth_range(
+    const depth_image_8& depth_8u,
+    const rect& roi, float& depth_mean, vec2i& center_mass_point)
 {
     int roiW = roi.width, roiH = roi.height;
     if (roiW <= 0 || roiH <= 0) return false;
@@ -203,9 +203,9 @@ bool CenterOfMassCalculator::CalculateComWithDepthRange(
     std::vector<uint8_t> roiData(roiW * roiH);
     for (int y = 0; y < roiH; ++y)
         for (int x = 0; x < roiW; ++x)
-            roiData[y * roiW + x] = depth8U.data[(roi.y + y) * depth8U.width + (roi.x + x)];
+            roiData[y * roiW + x] = depth_8u.data[(roi.y + y) * depth_8u.width + (roi.x + x)];
 
-    // Histogram: bin i = count of pixels with depth8U value i
+    // Histogram: bin i = count of pixels with depth_8u value i
     int histSize = MaxDepth8U + 1;
     std::vector<float> hist(histSize, 0.0f);
     for (uint8_t v : roiData)
@@ -282,58 +282,58 @@ bool CenterOfMassCalculator::CalculateComWithDepthRange(
 
     if ((histRangeEnd - histRangeStart) >= (MaxDepth8U - 1)) return false;
 
-    float meanDepth8U = CalcHistRangeMean(hist, histRangeStart, histRangeEnd);
+    float meanDepth8U = calc_hist_range_mean(hist, histRangeStart, histRangeEnd);
 
     // Optionally extend toward a nearby head cluster (closer to camera, within 100 mm)
     for (auto const& r : allRanges) {
         if (r.end < histRangeStart) {
-            float meanRange = CalcHistRangeMean(hist, r.start, r.end);
+            float meanRange = calc_hist_range_mean(hist, r.start, r.end);
             if ((meanDepth8U - meanRange) <= 5) { histRangeStart = r.start; break; }
         }
     }
 
     // Recompute mean over the final range (possibly extended to include head cluster)
-    meanDepth8U = CalcHistRangeMean(hist, histRangeStart, histRangeEnd);
-    depthMean = std::floor(meanDepth8U * SCALE_DEPTH + SUBTRACT_FROM_DEPTH);
+    meanDepth8U = calc_hist_range_mean(hist, histRangeStart, histRangeEnd);
+    depth_mean = std::floor(meanDepth8U * SCALE_DEPTH + SUBTRACT_FROM_DEPTH);
 
     // Build mask and find 2D center-of-mass
     std::vector<uint8_t> mask(roiW * roiH, 0);
     for (int j = 0; j < (int)roiData.size(); ++j)
         if (roiData[j] >= histRangeStart && roiData[j] <= histRangeEnd) mask[j] = 1;
 
-    Vec2i com;
-    if (!CalcCenterOfMask(mask, roiW, roiH, com)) return false;
+    vec2i com;
+    if (!calc_center_of_mask(mask, roiW, roiH, com)) return false;
 
-    centerMassPoint = {com.x + roi.x, com.y + roi.y};
+    center_mass_point = {com.x + roi.x, com.y + roi.y};
     return true;
 }
 
 // ---------------------------------------------------------------------------
-// RunNonRangeComCalculationFlow  (fallback when histogram path fails)
+// run_non_range_com_calculation_flow  (fallback when histogram path fails)
 // ---------------------------------------------------------------------------
 
-bool CenterOfMassCalculator::RunNonRangeComCalculationFlow(
-    const Rect& colorRect, const DepthImage16& depth,
-    Vec2f personCenter, const CameraIntrinsics* intrinsics,
-    PersonCenterOfMass& result)
+bool center_of_mass_calculator::run_non_range_com_calculation_flow(
+    const rect& color_rect, const depth_image_16& depth,
+    vec2f person_center, const camera_intrinsics* intrinsics,
+    person_center_of_mass& result)
 {
     // Clamp starting sample point inside the bbox
-    Vec2f samplePt = personCenter;
-    if (colorRect.y > personCenter.y)
-        samplePt.y = (float)(colorRect.y + 10);
+    vec2f samplePt = person_center;
+    if (color_rect.y > person_center.y)
+        samplePt.y = (float)(color_rect.y + 10);
 
-    float averageDepth = (float)GetDepthAtColorPixel(depth, samplePt);
+    float averageDepth = (float)get_depth_at_color_pixel(depth, samplePt);
 
     int   count = NUM_DEPTH_SAMPLES + 3;
     std::vector<float> depthSamples(count, 0.0f);
-    float yProgression = colorRect.height / (float)NUM_DEPTH_SAMPLES;
+    float yProgression = color_rect.height / (float)NUM_DEPTH_SAMPLES;
     float chosenDepth  = averageDepth;
 
     for (int i = 0; i < count; ++i) {
         if (i >= NUM_DEPTH_SAMPLES - 1 && chosenDepth >= MIN_DEPTH) break;
-        float sampleY = std::min( colorRect.y + (i + 1) * yProgression,
-                                   float( colorRect.y + colorRect.height - 1 ) );
-        depthSamples[i] = (float)GetDepthAtColorPixel(depth, {personCenter.x, sampleY});
+        float sampleY = std::min( color_rect.y + (i + 1) * yProgression,
+                                   float( color_rect.y + color_rect.height - 1 ) );
+        depthSamples[i] = (float)get_depth_at_color_pixel(depth, {person_center.x, sampleY});
         if (chosenDepth <= MAX_DEPTH) {
             if ((std::abs(chosenDepth - depthSamples[i]) < MAX_DEPTH_FOR_SAMPLES
                     && chosenDepth < depthSamples[i]) ||
@@ -358,58 +358,58 @@ bool CenterOfMassCalculator::RunNonRangeComCalculationFlow(
         }
     }
 
-    result.meanBodyDepth = (averageDepth <= MIN_DEPTH) ? 0.0f : averageDepth;
+    result.mean_body_depth = (averageDepth <= MIN_DEPTH) ? 0.0f : averageDepth;
 
     if (intrinsics && averageDepth > MIN_DEPTH) {
-        Vec2i centerPx = {(int)(personCenter.x + 0.5f), (int)(personCenter.y + 0.5f)};
-        result.worldPos  = PixelToCamera(centerPx, averageDepth, *intrinsics);
-        result.imagePos  = {personCenter.x, personCenter.y};
+        vec2i centerPx = {(int)(person_center.x + 0.5f), (int)(person_center.y + 0.5f)};
+        result.world_pos = pixel_to_camera(centerPx, averageDepth, *intrinsics);
+        result.image_pos = {person_center.x, person_center.y};
     }
     return true;
 }
 
 // ---------------------------------------------------------------------------
-// Calculate  (main entry point)
+// calculate  (main entry point)
 // ---------------------------------------------------------------------------
 
-bool CenterOfMassCalculator::Calculate(
-    const DepthImage16&     rawDepth,
-    const DepthImage8&      depth8U,
-    const Rect&             colorBbox,
-    const Vec2f&                personCenterColor,
-    const CameraIntrinsics*     intrinsics,
-    PersonCenterOfMass&         result)
+bool center_of_mass_calculator::calculate(
+    const depth_image_16&   raw_depth,
+    const depth_image_8&    depth_8u,
+    const rect&             color_bbox,
+    const vec2f&            person_center_color,
+    const camera_intrinsics*    intrinsics,
+    person_center_of_mass&      result)
 {
-    if (!rawDepth.data || rawDepth.width == 0 || rawDepth.height == 0)
+    if (!raw_depth.data || raw_depth.width == 0 || raw_depth.height == 0)
         return false;
-    if (!depth8U.data || depth8U.width != rawDepth.width || depth8U.height != rawDepth.height)
+    if (!depth_8u.data || depth_8u.width != raw_depth.width || depth_8u.height != raw_depth.height)
         return false;
 
     // 1. With aligned depth, the color bbox IS the depth ROI — just clamp to bounds
-    Rect roi = ClampRectToImage(colorBbox, rawDepth.width, rawDepth.height);
+    rect roi = clamp_rect_to_image(color_bbox, raw_depth.width, raw_depth.height);
 
     // 2. Histogram-based COM + mean depth
-    float depthMean = 0.0f;
-    Vec2i centerMassPoint = {0, 0};
-    bool  status = CalculateComWithDepthRange(
-                       depth8U, roi, depthMean, centerMassPoint);
+    float depth_mean = 0.0f;
+    vec2i center_mass_point = {0, 0};
+    bool  status = calculate_com_with_depth_range(
+                       depth_8u, roi, depth_mean, center_mass_point);
 
     if (status) {
-        result.meanBodyDepth = (depthMean <= MIN_DEPTH) ? 0.0f : depthMean;
+        result.mean_body_depth = (depth_mean <= MIN_DEPTH) ? 0.0f : depth_mean;
 
-        if (intrinsics && depthMean > MIN_DEPTH) {
-            float localDepth = (float)getMeanSurroundingDepth(
-                                   rawDepth, centerMassPoint, 5, 0, NO_DEPTH);
-            result.worldPos = PixelToCamera(centerMassPoint, localDepth, *intrinsics);
-            result.imagePos = {(float)centerMassPoint.x, (float)centerMassPoint.y};
+        if (intrinsics && depth_mean > MIN_DEPTH) {
+            float localDepth = (float)get_mean_surrounding_depth(
+                                   raw_depth, center_mass_point, 5, 0, NO_DEPTH);
+            result.world_pos = pixel_to_camera(center_mass_point, localDepth, *intrinsics);
+            result.image_pos = {(float)center_mass_point.x, (float)center_mass_point.y};
         }
     } else {
         // Fallback: sample-based estimation along the bbox center column
-        RunNonRangeComCalculationFlow(
-            colorBbox, rawDepth, personCenterColor, intrinsics, result);
+        run_non_range_com_calculation_flow(
+            color_bbox, raw_depth, person_center_color, intrinsics, result);
     }
 
     return true;
 }
 
-} // namespace COM
+} // namespace com

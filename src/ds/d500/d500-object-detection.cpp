@@ -127,6 +127,31 @@ namespace librealsense
         }
     }
 
+    void d500_object_detection::on_depth_sensor_stopping() noexcept
+    {
+        auto raw_depth = get_raw_depth_sensor();
+        if( !raw_depth )
+            return;
+
+        try
+        {
+            raw_depth->invoke_powered( []( platform::uvc_device & dev )
+            {
+                uint8_t enable = 0;
+                if( !dev.set_xu( ds::depth_xu, ds::DS5_ALIGN_DEPTH, &enable, sizeof( enable ) ) )
+                    LOG_WARNING( "Failed to disable Align_Depth XU on depth sensor" );
+            } );
+        }
+        catch( std::exception const & e )
+        {
+            LOG_WARNING( "Align_Depth XU disable exception: " << e.what() );
+        }
+        catch( ... )
+        {
+            LOG_WARNING( "Align_Depth XU disable: unknown exception" );
+        }
+    }
+
     stream_profiles d500_object_detection_sensor::init_stream_profiles()
     {
         // TODO - check if needed. Registers extrinsics, but not sure it is needed for the OD stream, which is not a physical stream.
