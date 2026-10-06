@@ -145,6 +145,8 @@ extern "C" {
         RS2_OPTION_EMITTER_MODE, /**< Emitter mode, mutually exclusive values: Off, On, Always On (constant laser), On Off (alternating per frame) */
         RS2_OPTION_ENABLE_ALIGNED_DEPTH, /**< Device-side depth-to-color alignment: the depth stream returns Z16 aligned to the color viewport. */
         RS2_OPTION_PASSIVE_DEPTH_MODE, /**< D585 2C: which exposure classes produce depth, see rs2_passive_depth_mode for values (pre-stream only) */
+        RS2_OPTION_OCCUPANCY_GRID_SEGMENTATION, /**< OccupancyGrid_Segmentation: Off (0) = depth-only labeling, On (1) = OG uses the segmentation mode and classes (pre-stream only) */
+        RS2_OPTION_LPCL_SEGMENTATION, /**< LPCL_Segmentation: Off (0) = depth-only labeling, On (1) = Labeled PCL uses the segmentation mode and classes (pre-stream only) */
         RS2_OPTION_COUNT /**< Number of enumeration values. Not a valid input: intended to be used in for-loops. */
     } rs2_option;
 

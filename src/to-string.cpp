@@ -633,6 +633,8 @@ std::string const & get_string_( rs2_option value )
         CASE( EMITTER_MODE )
         CASE( ENABLE_ALIGNED_DEPTH )
         CASE( PASSIVE_DEPTH_MODE )
+        CASE( OCCUPANCY_GRID_SEGMENTATION )
+        arr[RS2_OPTION_LPCL_SEGMENTATION] = "LPCL Segmentation";
 #undef CASE
         return arr;
     }();
